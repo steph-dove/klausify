@@ -1,12 +1,13 @@
 Debug the error or issue described below. Follow these steps:
 
 1. Read CLAUDE.md to understand the project structure, test commands, and known pitfalls.
-2. Analyze the error message or described behavior.
-3. Search the codebase for the relevant code using Grep and Glob.
-4. Read the full files involved to understand context.
-5. Identify the root cause.
-6. Implement the fix.
-7. Run the project's test command to verify the fix doesn't break anything.
+2. Run `git diff` and `git log --oneline -10` to see recent changes and commits — regressions often hide here.
+3. Analyze the error message or described behavior.
+4. Search the codebase for the relevant code using Grep and Glob.
+5. Read the full files involved to understand context.
+6. Identify the root cause.
+7. Implement the fix.
+8. Run the project's test command to verify the fix doesn't break anything.
 
 Rules:
 - Fix the root cause, not the symptom.
