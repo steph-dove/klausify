@@ -1,0 +1,176 @@
+"""CLI entry point for klausify."""
+
+import subprocess
+from pathlib import Path
+
+import typer
+from rich.console import Console
+
+from klausify import __version__
+from klausify.agents import scaffold_agents
+from klausify.checklist import generate_checklist
+from klausify.claude_md import run_init
+from klausify.commands import scaffold_commands
+from klausify.github import scaffold_github
+from klausify.gitignore import update_gitignore
+from klausify.hooks import scaffold_hooks
+from klausify.settings import generate_settings
+
+app = typer.Typer(name="klausify", help="Claude Code boilerplate generator.")
+console = Console()
+
+
+def version_callback(value: bool) -> None:
+    if value:
+        console.print(f"klausify {__version__}")
+        raise typer.Exit()
+
+
+def _detect_base_branch(repo: Path) -> str | None:
+    """Try to detect the base branch from git."""
+    for branch in ["dev", "develop", "main", "master"]:
+        result = subprocess.run(
+            ["git", "rev-parse", "--verify", branch],
+            capture_output=True,
+            cwd=str(repo),
+        )
+        if result.returncode == 0:
+            return branch
+    return None
+
+
+def _prompt_base_branch(repo: Path) -> str:
+    """Prompt the user for the base branch."""
+    detected = _detect_base_branch(repo)
+    if detected:
+        default = detected
+        prompt_text = f"Base branch (detected: {detected})"
+    else:
+        default = "main"
+        prompt_text = "Base branch"
+    return typer.prompt(prompt_text, default=default)
+
+
+@app.callback()
+def _callback(
+    version: bool = typer.Option(
+        False, "--version", "-V", callback=version_callback, is_eager=True,
+        help="Show version and exit.",
+    ),
+) -> None:
+    """Claude Code boilerplate generator."""
+
+
+@app.command()
+def init(
+    repo: Path = typer.Option(".", "--repo", "-r", help="Path to the repository."),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing files."),
+    skip_enrich: bool = typer.Option(
+        False, "--skip-enrich", help="Skip Claude CLI enrichment (faster, no API call)."
+    ),
+    review_template: Path | None = typer.Option(
+        None, "--review-template",
+        help="Path to a custom review prompt to use instead of the default.",
+    ),
+    base_branch: str | None = typer.Option(
+        None, "--base-branch", "-b",
+        help="Base branch for diffs (e.g. dev, main). Prompts if not provided.",
+    ),
+) -> None:
+    """Generate all Claude Code boilerplate for a repository."""
+    repo = repo.resolve()
+
+    if base_branch is None:
+        base_branch = _prompt_base_branch(repo)
+
+    steps: list[tuple[str, callable]] = [
+        ("CLAUDE.md", lambda: run_init(repo=repo, force=force, skip_enrich=skip_enrich)),
+        ("review command", lambda: generate_checklist(
+            repo=repo, force=force, base_branch=base_branch,
+        )),
+        ("slash commands", lambda: scaffold_commands(
+            repo=repo, force=force, review_template=review_template, base_branch=base_branch,
+        )),
+        ("settings", lambda: generate_settings(repo=repo, force=force)),
+        ("hooks", lambda: scaffold_hooks(repo=repo, force=force)),
+        ("PR template", lambda: scaffold_github(repo=repo, force=force)),
+        ("AGENTS.md", lambda: scaffold_agents(repo=repo, force=force)),
+        (".gitignore", lambda: update_gitignore(repo=repo)),
+    ]
+
+    for name, step in steps:
+        try:
+            step()
+        except SystemExit:
+            console.print(f"[yellow]⚠ Skipped {name}[/yellow]")
+
+    console.print("\n[bold green]✔ All boilerplate generated![/bold green]")
+
+
+@app.command()
+def checklist(
+    repo: Path = typer.Option(".", "--repo", "-r", help="Path to the repository."),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing files."),
+    base_branch: str | None = typer.Option(
+        None, "--base-branch", "-b",
+        help="Base branch for diffs (e.g. dev, main). Prompts if not provided.",
+    ),
+) -> None:
+    """Generate a repo-tailored review command from CLAUDE.md."""
+    repo = repo.resolve()
+    if base_branch is None:
+        base_branch = _prompt_base_branch(repo)
+    generate_checklist(repo=repo, force=force, base_branch=base_branch)
+
+
+@app.command()
+def commands(
+    repo: Path = typer.Option(".", "--repo", "-r", help="Path to the repository."),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing files."),
+    review_template: Path | None = typer.Option(
+        None, "--review-template",
+        help="Path to a custom review prompt to use instead of the default.",
+    ),
+    base_branch: str | None = typer.Option(
+        None, "--base-branch", "-b",
+        help="Base branch for diffs (e.g. dev, main). Prompts if not provided.",
+    ),
+) -> None:
+    """Scaffold .claude/commands/ with review, test, fix, pr, commit, and debug."""
+    repo = repo.resolve()
+    if base_branch is None:
+        base_branch = _prompt_base_branch(repo)
+    scaffold_commands(
+        repo=repo, force=force, review_template=review_template, base_branch=base_branch,
+    )
+
+
+@app.command()
+def settings(
+    repo: Path = typer.Option(".", "--repo", "-r", help="Path to the repository."),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing files."),
+) -> None:
+    """Generate .claude/settings.json with stack-appropriate defaults."""
+    generate_settings(repo=repo, force=force)
+
+
+@app.command()
+def hooks(
+    repo: Path = typer.Option(".", "--repo", "-r", help="Path to the repository."),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing files."),
+) -> None:
+    """Scaffold Claude Code hook configurations."""
+    scaffold_hooks(repo=repo, force=force)
+
+
+@app.command()
+def github(
+    repo: Path = typer.Option(".", "--repo", "-r", help="Path to the repository."),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing files."),
+) -> None:
+    """Generate PR template for the repository."""
+    scaffold_github(repo=repo, force=force)
+
+
+def main() -> None:
+    app()
