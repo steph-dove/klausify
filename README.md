@@ -112,11 +112,57 @@ All subcommands support `--repo`, `--force`, and `--base-branch` where applicabl
 5. Sets permissions, deny rules, and hooks based on what it finds
 6. Skips anything that already exists (PR template, AGENTS.md) unless `--force` is used
 
+## Claude Code Integration
+
+klausify can be used three ways with Claude Code:
+
+### As a CLI (simplest)
+
+```bash
+pip install klausify
+klausify init
+```
+
+### As a Claude Code Plugin
+
+Install the plugin directly from GitHub:
+
+```
+/plugin install https://github.com/steph-dove/klausify
+```
+
+This gives you the `/klausify-init` skill and the MCP server.
+
+### As an MCP Server
+
+Add klausify as an MCP server so Claude can invoke it directly:
+
+```bash
+pip install klausify[mcp]
+claude mcp add --transport stdio klausify -- klausify-mcp
+```
+
+Or add to your project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "klausify": {
+      "command": "klausify-mcp",
+      "env": { "PYTHONUNBUFFERED": "1" }
+    }
+  }
+}
+```
+
+The MCP server exposes these tools: `klausify_init`, `klausify_checklist`, `klausify_commands`, `klausify_settings`, `klausify_status`.
+
 ## Requirements
 
 - Python 3.10+
 - [conventions-cli](https://pypi.org/project/conventions-cli/) >= 1.3.0
 - [Claude Code CLI](https://www.npmjs.com/package/@anthropic-ai/claude-code) (optional, for `--init` enrichment)
+- [mcp](https://pypi.org/project/mcp/) (optional, for MCP server: `pip install klausify[mcp]`)
 
 ## Contributing
 

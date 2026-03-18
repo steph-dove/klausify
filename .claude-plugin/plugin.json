@@ -1,0 +1,22 @@
+{
+  "name": "klausify",
+  "version": "0.1.1",
+  "description": "Claude Code boilerplate generator — scaffolds CLAUDE.md, slash commands, settings, hooks, and PR templates",
+  "author": {
+    "name": "Stephanie Dover",
+    "url": "https://github.com/steph-dove"
+  },
+  "homepage": "https://github.com/steph-dove/klausify",
+  "repository": "https://github.com/steph-dove/klausify",
+  "license": "MIT",
+  "keywords": ["boilerplate", "scaffold", "conventions", "ai"],
+  "mcpServers": {
+    "klausify": {
+      "command": "pipx",
+      "args": ["run", "klausify-mcp"],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}

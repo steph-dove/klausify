@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "klausify"
-version = "0.1.0"
+version = "0.1.1"
 description = "Claude Code boilerplate generator — scaffolds CLAUDE.md, PR checklists, slash commands, settings, hooks, and CI workflows"
 readme = "README.md"
 license = "MIT"
@@ -31,9 +31,11 @@ Issues = "https://github.com/steph-dove/klausify/issues"
 
 [project.scripts]
 klausify = "klausify.cli:main"
+klausify-mcp = "klausify.mcp_server:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "ruff>=0.4.0"]
+mcp = ["mcp[cli]>=1.0.0"]
+dev = ["pytest>=7.0", "ruff>=0.4.0", "mcp[cli]>=1.0.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
