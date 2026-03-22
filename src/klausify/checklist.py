@@ -80,6 +80,11 @@ def _build_pitfall_checks(pitfalls: list[str]) -> str:
     return "\n".join(lines)
 
 
+def _review_filename(repo: Path) -> str:
+    """Return the review command filename scoped to the repo name."""
+    return f"pr-review-{repo.name}.md"
+
+
 def generate_checklist(*, repo: Path, force: bool = False, base_branch: str = "main") -> Path:
     """Generate a review command enriched with CLAUDE.md findings."""
     repo = repo.resolve()
@@ -91,7 +96,7 @@ def generate_checklist(*, repo: Path, force: bool = False, base_branch: str = "m
         )
         raise SystemExit(1)
 
-    output_file = repo / ".claude" / "commands" / "review.md"
+    output_file = repo / ".claude" / "commands" / _review_filename(repo)
 
     if output_file.exists() and not force:
         console.print(

@@ -26,7 +26,7 @@ That's it. You'll be prompted for your base branch (auto-detects `dev`, `main`, 
 ├── CLAUDE.md                    # Repo conventions (via conventions-cli)
 ├── settings.json                # Tool permissions + deny rules + PreCommit hooks
 └── commands/
-    ├── review.md                # PR review with repo-specific checks
+    ├── pr-review-<repo>.md      # PR review with repo-specific checks
     ├── test.md                  # Write tests for current changes
     ├── fix.md                   # Fix lint/format/type errors
     ├── pr.md                    # Generate a PR description
@@ -47,11 +47,11 @@ AGENTS.md                        # Only if repo doesn't have one
 
 **settings.json** — Auto-detects your stack (Python, Node, Go, Rust, Make) and sets tool permissions. Detects sensitive files (`.env`, `*.pem`, `credentials*`) and adds deny rules so Claude can't read them.
 
-**Slash commands** — Available as `/review`, `/test`, `/fix`, `/pr`, `/commit`, `/debug` in Claude Code:
+**Slash commands** — Available as `/pr-review-<repo>`, `/test`, `/fix`, `/pr`, `/commit`, `/debug` in Claude Code:
 
 | Command | What it does | Output |
 |---------|-------------|--------|
-| `/review` | Senior-level PR review against your base branch, enriched with repo conventions | `REVIEW_OUTPUT.md` |
+| `/pr-review-<repo>` | Senior-level PR review against your base branch, enriched with repo conventions | `REVIEW_OUTPUT.md` |
 | `/test` | Writes tests for current changes matching your repo's test patterns | — |
 | `/fix` | Fixes all lint, format, and type errors | — |
 | `/pr` | Generates a ready-to-paste PR description | `pr-description.md` |
@@ -87,7 +87,7 @@ If your team has a specific review checklist (e.g. domain-specific checks, secur
 klausify init --review-template path/to/your-review.md
 ```
 
-The template will be used as the `/review` slash command instead of the default.
+The template will be used as the `/pr-review-<repo>` slash command instead of the default.
 
 ## Individual Commands
 
@@ -107,7 +107,7 @@ All subcommands support `--repo`, `--force`, and `--base-branch` where applicabl
 
 1. Runs `conventions discover --claude --init` to analyze your codebase and generate `CLAUDE.md`
 2. Parses `CLAUDE.md` to extract conventions, commands, and pitfalls
-3. Injects those into the review command template so `/review` checks repo-specific rules
+3. Injects those into the review command template so `/pr-review-<repo>` checks repo-specific rules
 4. Detects your stack from marker files (`pyproject.toml`, `package.json`, `go.mod`, etc.)
 5. Sets permissions, deny rules, and hooks based on what it finds
 6. Skips anything that already exists (PR template, AGENTS.md) unless `--force` is used

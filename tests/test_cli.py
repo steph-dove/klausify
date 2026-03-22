@@ -117,6 +117,8 @@ class TestCommands:
         names = [f.name for f in created]
         assert "commit.md" in names
         assert "debug.md" in names
+        assert f"pr-review-{repo.name}.md" in names
+        assert "review.md" not in names
 
     def test_scaffold_commands_idempotent(self, repo: Path):
         scaffold_commands(repo=repo)
@@ -145,7 +147,8 @@ class TestChecklist:
 
     def test_generate_checklist(self, repo_with_claude_md: Path):
         path = generate_checklist(repo=repo_with_claude_md)
-        assert path == repo_with_claude_md / ".claude" / "commands" / "review.md"
+        expected = f"pr-review-{repo_with_claude_md.name}.md"
+        assert path == repo_with_claude_md / ".claude" / "commands" / expected
         content = path.read_text()
         assert "snake_case" in content
         assert "`pytest`" in content

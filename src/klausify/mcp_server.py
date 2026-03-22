@@ -87,7 +87,9 @@ def klausify_status(repo: str = ".") -> str:
     files = {
         ".claude/CLAUDE.md": repo_path / ".claude" / "CLAUDE.md",
         ".claude/settings.json": repo_path / ".claude" / "settings.json",
-        ".claude/commands/review.md": repo_path / ".claude" / "commands" / "review.md",
+        f".claude/commands/pr-review-{repo_path.name}.md": (
+            repo_path / ".claude" / "commands" / f"pr-review-{repo_path.name}.md"
+        ),
         ".claude/commands/test.md": repo_path / ".claude" / "commands" / "test.md",
         ".claude/commands/fix.md": repo_path / ".claude" / "commands" / "fix.md",
         ".claude/commands/pr.md": repo_path / ".claude" / "commands" / "pr.md",

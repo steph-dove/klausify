@@ -10,6 +10,11 @@ console = Console()
 COMMAND_FILES = ["review.md", "test.md", "fix.md", "pr.md", "commit.md", "debug.md"]
 
 
+def _review_filename(repo: Path) -> str:
+    """Return the review command filename scoped to the repo name."""
+    return f"pr-review-{repo.name}.md"
+
+
 def scaffold_commands(
     *,
     repo: Path,
@@ -26,7 +31,9 @@ def scaffold_commands(
     templates = resources.files("klausify").joinpath("templates/commands")
 
     for filename in COMMAND_FILES:
-        target = commands_dir / filename
+        # Rename review.md to pr-review-<repo>.md
+        target_filename = _review_filename(repo) if filename == "review.md" else filename
+        target = commands_dir / target_filename
         if target.exists() and not force:
             console.print(
                 f"[yellow]⚠ {target.relative_to(repo)} already exists, skipping.[/yellow]"
