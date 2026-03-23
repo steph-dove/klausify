@@ -1,6 +1,7 @@
 """Wraps conventions-cli to generate and enrich CLAUDE.md."""
 
 import subprocess
+import sys
 from pathlib import Path
 
 from rich.console import Console
@@ -23,7 +24,7 @@ def run_init(*, repo: Path, force: bool = False, skip_enrich: bool = False) -> P
     # Install/upgrade conventions-cli to latest
     console.print("[dim]Ensuring latest conventions-cli...[/dim]")
     upgrade_result = subprocess.run(
-        ["pip", "install", "--upgrade", "conventions-cli"],
+        [sys.executable, "-m", "pip", "install", "--upgrade", "conventions-cli"],
         capture_output=True,
     )
     if upgrade_result.returncode != 0:
