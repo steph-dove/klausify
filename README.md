@@ -31,7 +31,9 @@ That's it. You'll be prompted for your base branch (auto-detects `dev`, `main`, 
     ├── fix.md                   # Fix lint/format/type errors
     ├── pr.md                    # Generate a PR description
     ├── commit.md                # Generate a commit message
-    └── debug.md                 # Debug an error with repo context
+    ├── debug.md                 # Debug an error with repo context
+    ├── new-worktree.md          # Create a git worktree for a task
+    └── explain.md               # Explain code or current diff
 
 .github/
 └── PULL_REQUEST_TEMPLATE.md     # Only if repo doesn't have one
@@ -47,7 +49,7 @@ AGENTS.md                        # Only if repo doesn't have one
 
 **settings.json** — Auto-detects your stack (Python, Node, Go, Rust, Make) and sets tool permissions. Detects sensitive files (`.env`, `*.pem`, `credentials*`) and adds deny rules so Claude can't read them.
 
-**Slash commands** — Available as `/pr-review-<repo>`, `/test`, `/fix`, `/pr`, `/commit`, `/debug` in Claude Code:
+**Slash commands** — Available as `/pr-review-<repo>`, `/test`, `/fix`, `/pr`, `/commit`, `/debug`, `/new-worktree`, `/explain` in Claude Code:
 
 | Command | What it does | Output |
 |---------|-------------|--------|
@@ -57,6 +59,8 @@ AGENTS.md                        # Only if repo doesn't have one
 | `/pr` | Generates a ready-to-paste PR description | `pr-description.md` |
 | `/commit` | Generates a commit message from staged changes | — |
 | `/debug` | Debugs an error using repo context and test commands | — |
+| `/new-worktree` | Creates a git worktree with a branch named for your task | — |
+| `/explain` | Explains code or concept; defaults to explaining the current diff | — |
 
 **PreCommit hooks** — Auto-detects your lint/format commands and runs them before each commit.
 
