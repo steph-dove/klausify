@@ -9,7 +9,18 @@ from klausify import __version__
 
 console = Console()
 
-COMMAND_FILES = ["review.md", "test.md", "fix.md", "pr.md", "commit.md", "debug.md", "new-worktree.md", "explain.md"]
+COMMAND_FILES = [
+    "review.md",
+    "test.md",
+    "fix.md",
+    "pr.md",
+    "commit.md",
+    "debug.md",
+    "new-worktree.md",
+    "explain.md",
+    "implement.md",
+    "refactor.md",
+]
 
 VERSION_FILE = ".klausify-version"
 

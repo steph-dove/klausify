@@ -110,7 +110,7 @@ class TestSettings:
 class TestCommands:
     def test_scaffold_commands(self, repo: Path):
         created = scaffold_commands(repo=repo)
-        assert len(created) == 6
+        assert len(created) == 10
         for f in created:
             assert f.exists()
             assert f.suffix == ".md"
@@ -128,7 +128,7 @@ class TestCommands:
     def test_scaffold_commands_force(self, repo: Path):
         scaffold_commands(repo=repo)
         created = scaffold_commands(repo=repo, force=True)
-        assert len(created) == 6
+        assert len(created) == 10
 
     def test_scaffold_commands_base_branch(self, repo: Path):
         scaffold_commands(repo=repo, base_branch="dev")
@@ -161,6 +161,45 @@ class TestChecklist:
         content = path.read_text()
         assert "develop..HEAD" in content
         assert "{{BASE_BRANCH}}" not in content
+
+    def test_generate_checklist_has_triage_logic(self, repo_with_claude_md: Path):
+        path = generate_checklist(repo=repo_with_claude_md)
+        content = path.read_text()
+        assert "150 lines" in content
+        assert "Small PR Review" in content
+        assert "Parallel Review" in content
+
+    def test_generate_checklist_has_agent_prompts(self, repo_with_claude_md: Path):
+        path = generate_checklist(repo=repo_with_claude_md)
+        content = path.read_text()
+        assert "Agent 1: Correctness & Logic" in content
+        assert "Agent 2: Architecture & Design" in content
+        assert "Agent 3: Security & Quality" in content
+        assert "Agent 4: Scope & Conventions" in content
+
+    def test_generate_checklist_has_validation(self, repo_with_claude_md: Path):
+        path = generate_checklist(repo=repo_with_claude_md)
+        content = path.read_text()
+        assert "Phase 3: Validation" in content
+        assert "Trace the code path" in content
+        assert "Remove invalid findings" in content
+        # Also present in the small PR path
+        assert "Validate findings:" in content
+
+    def test_generate_checklist_has_synthesis(self, repo_with_claude_md: Path):
+        path = generate_checklist(repo=repo_with_claude_md)
+        content = path.read_text()
+        assert "Phase 4: Synthesis" in content
+        assert "Deduplicate" in content
+        assert "Review method:" in content
+
+    def test_generate_checklist_repo_checks_in_agent4(self, repo_with_claude_md: Path):
+        path = generate_checklist(repo=repo_with_claude_md)
+        content = path.read_text()
+        # Repo-specific checks should appear in Agent 4's section
+        agent4_start = content.index("Agent 4: Scope & Conventions")
+        assert "snake_case" in content[agent4_start:]
+        assert "PYTHONPATH" in content[agent4_start:]
 
     def test_generate_checklist_no_claude_md(self, repo: Path):
         with pytest.raises(SystemExit):
