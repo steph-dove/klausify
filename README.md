@@ -26,12 +26,14 @@ That's it. You'll be prompted for your base branch (auto-detects `dev`, `main`, 
 ├── CLAUDE.md                    # Repo conventions (via conventions-cli)
 ├── settings.json                # Tool permissions + deny rules + PreCommit hooks
 └── commands/
-    ├── pr-review-<repo>.md      # PR review with repo-specific checks
+    ├── pr-review-<repo>.md      # PR review with parallel sub-agents and repo-specific checks
     ├── test.md                  # Write tests for current changes
     ├── fix.md                   # Fix lint/format/type errors
     ├── pr.md                    # Generate a PR description
     ├── commit.md                # Generate a commit message
-    ├── debug.md                 # Debug an error with repo context
+    ├── debug.md                 # Debug an error with root-cause analysis and a failing test
+    ├── implement.md             # Implement a pasted task/ticket/design doc with plan-mode investigation
+    ├── refactor.md              # Refactor code while preserving behavior, with test-backed safety net
     ├── new-worktree.md          # Create a git worktree for a task
     └── explain.md               # Explain code or current diff
 
@@ -49,16 +51,18 @@ AGENTS.md                        # Only if repo doesn't have one
 
 **settings.json** — Auto-detects your stack (Python, Node, Go, Rust, Make) and sets tool permissions. Detects sensitive files (`.env`, `*.pem`, `credentials*`) and adds deny rules so Claude can't read them.
 
-**Slash commands** — Available as `/pr-review-<repo>`, `/test`, `/fix`, `/pr`, `/commit`, `/debug`, `/new-worktree`, `/explain` in Claude Code:
+**Slash commands** — Available as `/pr-review-<repo>`, `/test`, `/fix`, `/pr`, `/commit`, `/debug`, `/implement`, `/refactor`, `/new-worktree`, `/explain` in Claude Code:
 
 | Command | What it does | Output |
 |---------|-------------|--------|
-| `/pr-review-<repo>` | Senior-level PR review against your base branch, enriched with repo conventions | `REVIEW_OUTPUT.md` |
-| `/test` | Writes tests for current changes matching your repo's test patterns | — |
+| `/pr-review-<repo>` | Senior-level PR review against your base branch. Small PRs get a single-pass review; larger PRs fan out to parallel sub-agents (correctness, architecture, security, scope) with a validation phase that removes false positives | `REVIEW_OUTPUT.md` |
+| `/test` | Writes tests for current changes matching your repo's test patterns. Covers happy path, edge cases, and error paths without over-mocking | — |
 | `/fix` | Fixes all lint, format, and type errors | — |
 | `/pr` | Generates a ready-to-paste PR description | `pr-description.md` |
 | `/commit` | Generates a commit message from staged changes | — |
-| `/debug` | Debugs an error using repo context and test commands | — |
+| `/debug` | Five-phase debug flow: reproduce, diagnose root cause, write a failing test, fix, verify against the full suite | — |
+| `/implement <task>` | Implements a pasted ticket or design doc. Uses plan mode to investigate and plan before editing, enforces scope rules, and writes failing tests first for bug fixes | — |
+| `/refactor <target>` | Refactors code while preserving behavior exactly. Requires a passing test baseline, runs tests between every incremental step | — |
 | `/new-worktree` | Creates a git worktree with a branch named for your task | — |
 | `/explain` | Explains code or concept; defaults to explaining the current diff | — |
 
