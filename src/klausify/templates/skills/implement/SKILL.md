@@ -27,8 +27,9 @@ Before touching any code, do a targeted read-only investigation. This is the mos
 ### Step 1: Orient
 
 1. **Read CLAUDE.md** for project structure, conventions, and known pitfalls.
-2. **Find the entry point.** Starting from the UI or API surface described in the task, grep for the route, component, or endpoint name. Read that file.
-3. **Confirm the data source.** Read the actual query or ORM call that provides the data for this feature — do not assume. If there are multiple levels of indirection (service calls a repository calls a query), trace until you hit the actual data access.
+2. **Read any `.claude/rules/*.md`** whose `paths:` glob matches the area you'll edit. Path-scoped rules carry layer-specific conventions (API patterns vs. DB patterns vs. UI patterns) that the project-wide CLAUDE.md doesn't.
+3. **Find the entry point.** Starting from the UI or API surface described in the task, grep for the route, component, or endpoint name. Read that file.
+4. **Confirm the data source.** Read the actual query or ORM call that provides the data for this feature — do not assume. If there are multiple levels of indirection (service calls a repository calls a query), trace until you hit the actual data access.
 
 ### Step 2: Confirm direction
 
@@ -59,7 +60,7 @@ Still in plan mode. Design your approach before writing code. Keep it minimal �
 3. **Tests first?** If this task is a bug fix or changes existing behavior, plan to write a failing test BEFORE writing the fix. This catches regressions immediately and proves the fix actually works. For new features, tests can come after.
 4. **Check your scope.** Re-read the task description. Cross-reference every planned change against it. Remove anything that isn't directly required.
 
-**Exit plan mode to proceed to implementation.** The user will review your plan first.
+**Call `ExitPlanMode` to request approval.** Do NOT edit any files until the user approves; once they do, plan mode exits automatically and Phase 4 begins.
 
 ---
 
@@ -112,3 +113,9 @@ These are non-negotiable:
 - **Do NOT refactor surrounding code** to be "cleaner" or "more consistent."
 - **Do NOT add dependencies** without explicit justification tied to the task.
 - **If the task says "add a button,"** add a button. Don't also redesign the layout, add animations, or create a reusable button component library.
+
+## When NOT to use
+
+- The task is a bug fix where the root cause isn't obvious — use the debug skill first to diagnose, then come back here with a confirmed plan.
+- The task is "make this code cleaner / better-structured" with no behavior change — use refactor instead, which preserves behavior under a test baseline.
+- The task is multi-feature, exploratory, or has no clear acceptance criteria — use plan first, which fans out parallel architects and surfaces clarifying questions before writing code.

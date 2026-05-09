@@ -5,19 +5,38 @@ allowed-tools: Read Bash(git diff *) Bash(git log *) Bash(git status *) Bash(git
 disable-model-invocation: true
 ---
 
-Write a commit message for the currently staged changes. Follow these steps:
+## Staged changes
 
-1. Run `git diff --cached --stat` to see what's staged.
-2. Run `git diff --cached` to read the actual changes.
-3. Read CLAUDE.md to understand the project's commit conventions.
-4. Run `git log --oneline -10` to see recent commit message style.
+```!
+git diff --cached --stat
+```
 
-Write a commit message following this format:
+```!
+git diff --cached
+```
+
+## Recent commit style
+
+```!
+git log --oneline -10
+```
+
+## Current branch
+
+```!
+git branch --show-current
+```
+
+## Instructions
+
+Write a commit message for the changes shown above. Read CLAUDE.md for any project-specific commit conventions before writing.
+
+Format:
 
 ```
 <type>(<scope>): <short summary>
 
-<body - explain what changed and why, not how>
+<body — explain what changed and why, not how>
 ```
 
 Types: feat, fix, refactor, test, docs, chore, style, perf
@@ -26,8 +45,14 @@ Scope: the area of code affected (e.g. auth, api, ui)
 Rules:
 - Summary line under 72 characters.
 - Body wraps at 80 characters.
-- Match the style of recent commits in the repo.
-- Focus on "why" in the body, not "what" (the diff shows "what").
-- If the branch name has a ticket reference, include it in the body.
+- Match the style of the recent commits shown above.
+- Focus on "why" in the body, not "what" (the diff already shows "what").
+- If the branch name has a ticket reference (e.g. FEAT-1234), include it in the body.
 
 Output ONLY the commit message, nothing else. Do not wrap it in code blocks.
+
+## When NOT to use
+
+- The user wants to actually run `git commit` — this skill only writes the message text.
+- Nothing is staged — ask the user to stage changes first instead of inventing a message.
+- The user wants a commit message for unstaged or unmerged changes — point them at `git add` first.

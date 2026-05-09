@@ -18,3 +18,9 @@ Rules:
 - Use lowercase kebab-case for branch names.
 - Prefix with `fix/`, `feat/`, `chore/`, `docs/`, or `refactor/` as appropriate.
 - Do not start work in the worktree — just create it and report the path.
+
+## When NOT to use
+
+- The user just wants a new branch in the current working tree (`git checkout -b`) — worktrees are for parallel checkouts, not branch creation alone.
+- A worktree for the same branch already exists — surface the existing path; don't create a duplicate.
+- The user is on a non-worktree-friendly hosting setup (some submodule-heavy repos break with worktrees) — flag the risk before creating.

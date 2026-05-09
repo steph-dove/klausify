@@ -5,15 +5,29 @@ allowed-tools: Read Grep Glob Bash(git *) Write
 disable-model-invocation: true
 ---
 
-Generate a PR description for the current branch. Follow these steps:
+## Branch
 
-1. Run `git branch --show-current` to get the branch name. Extract any ticket reference (e.g. FEAT-1234).
-2. Run `git log {{BASE_BRANCH}}..HEAD --oneline` to understand the commit history.
-3. Run `git diff {{BASE_BRANCH}}...HEAD --stat` to see which files changed.
-4. For key changed files, read them to understand the full context of the changes.
-5. Read CLAUDE.md for project conventions and context.
+```!
+git branch --show-current
+```
 
-Generate a PR description in this format:
+## Commit history vs base
+
+```!
+git log {{BASE_BRANCH}}..HEAD --oneline
+```
+
+## Files changed
+
+```!
+git diff {{BASE_BRANCH}}...HEAD --stat
+```
+
+## Instructions
+
+Generate a PR description for the changes summarized above. Extract any ticket reference (e.g. FEAT-1234) from the branch name. Read CLAUDE.md for project conventions and any PR template rules. For key changed files, read them to understand the full context — do not paraphrase from the diff alone.
+
+Output format:
 
 ```markdown
 ## Summary
@@ -44,3 +58,9 @@ Rules:
 - If there are new dependencies, mention them.
 
 Write the output to `pr-description.md` in the repo root.
+
+## When NOT to use
+
+- The user wants to actually open a PR (`gh pr create`) — this skill only writes the description text into a file.
+- The branch has no commits ahead of `{{BASE_BRANCH}}` — there's nothing to describe; tell the user instead.
+- The user wants a release-notes-style summary spanning multiple PRs — different shape; don't try to fit it in this template.

@@ -13,7 +13,8 @@ Refactor the code the user described. The goal is to change structure while pres
 Before changing any code, confirm you have tests that cover the current behavior.
 
 1. **Read CLAUDE.md** for project structure, test commands, and conventions.
-2. **Run the existing test suite.** Record the results — every test must pass before you start. If tests are failing already, stop and report that. Do not refactor code that doesn't have a passing baseline.
+2. **Read any `.claude/rules/*.md`** whose `paths:` glob matches the area being refactored — they encode the conventions the moved code must continue to obey.
+3. **Run the existing test suite.** Record the results — every test must pass before you start. If tests are failing already, stop and report that. Do not refactor code that doesn't have a passing baseline.
 3. **Assess coverage of the code you plan to change.** Read the existing tests for the modules involved. If a function you're restructuring has no tests:
    - Write tests for its current behavior first.
    - Run them to confirm they pass.
@@ -51,7 +52,18 @@ Execute your plan. After EACH incremental step:
 1. **Run the test suite.** If anything fails, your last change broke something. Fix it before moving on — do not accumulate breakage across steps.
 2. **Re-read the code** to verify it looks correct.
 
-Rules:
+### When a test fails mid-refactor
+
+Don't immediately edit the test or roll back the step. Diagnose:
+
+1. **Did you miss a caller?** Re-grep for the symbol you moved or renamed across the whole repo (not just the immediate file). Update every match in this same step.
+2. **Did you change a signature unintentionally?** Compare the new signature to the old one — argument order, default values, return type. Even a "trivial" rename of a kwarg breaks callers using keyword args.
+3. **Did you introduce a subtle behavior change?** Re-read the moved code line-by-line against the original. Refactors break in tiny ways: a list comprehension that no longer preserves order, an early-return that now runs cleanup, a class attribute that became an instance attribute.
+
+Only after the test is green again move on to the next step.
+
+### Rules
+
 - **Never change behavior and structure in the same step.** If you need to fix a bug you found, do it in a separate commit.
 - **Preserve all public interfaces** unless the explicit goal is to change them. If you change a function signature, update every caller in the same step.
 - **Don't "improve" things outside the refactor scope.** No drive-by style fixes, no adding types to unrelated code, no renaming things you aren't restructuring.
@@ -67,3 +79,9 @@ Rules:
    - No unrelated files were modified.
    - No debug code or commented-out code remains.
 3. **Verify callers.** Re-grep for callers of anything you moved or renamed. Confirm every reference was updated.
+
+## When NOT to use
+
+- The user wants to add new behavior, not rearrange existing code — use implement.
+- There's no passing test baseline AND the user can't accept "write tests first" — refactor without tests is just hope; flag the missing baseline and stop.
+- The user wants to fix a known bug as part of the refactor — split: bug fix in one commit (debug skill), refactor in another. Mixing them hides regressions.

@@ -12,7 +12,12 @@ Use TodoWrite throughout: create one task per phase up front, mark each in_progr
 
 Restate the user's request in your own words: what is being built, what problem it solves, what success looks like. Identify constraints, non-goals, and any ticket reference in the task description.
 
-If the request is genuinely ambiguous at the surface level (you can't even tell what the feature *is*), ask a quick first round before exploring. Phase 3 covers the deeper "what should error handling do" / "what about edge case X" questions; Phase 1 is just "do I understand what they want."
+**Surface-level ambiguity check** — before launching parallel exploration in Phase 2 (which costs 2-3 agent invocations), make sure you can answer all of these:
+- Can you name the *thing being built* in one sentence (a feature, a fix, a refactor)?
+- Do you know the *user-visible surface* it touches (an endpoint, a screen, a command)?
+- Is success *observable* (a behavior change you could write a test for)?
+
+If any answer is "no", ask the user before exploring. Phase 3 covers the deeper "what should error handling do" / "what about edge case X" questions; Phase 1 catches the "do I even know what they want" case so the parallel agents don't waste effort on the wrong target.
 
 Confirm with the user before continuing.
 
@@ -56,8 +61,9 @@ Launch 2–3 architect subagents IN PARALLEL via the Agent tool with `subagent_t
 
 ### Architect process (every architect uses this)
 
-- **Pattern analysis**: Re-confirm the existing patterns and conventions you will integrate with. Cite file:line refs.
+- **Pattern analysis**: Re-confirm the existing patterns and conventions you will integrate with. Cite file:line refs. Read any `.claude/rules/*.md` whose `paths:` glob matches the area you'll touch.
 - **Architecture decision**: Pick ONE approach (do not hedge with "or maybe X"). State it clearly and own the trade-offs.
+- **YAGNI rule**: Design the minimum surface that satisfies the task and Phase 3 answers. Do NOT add config knobs, extension hooks, abstractions for hypothetical future features, or "while we're here" cleanups. If the task doesn't ask for it, don't design it. Architect B (Clean architecture) may refactor more aggressively, but only when the existing structure actively blocks the task — never speculatively.
 - **Component design**: Each component with file path, responsibilities, dependencies, interface signature.
 - **Implementation map**: Specific files to create/modify with detailed change descriptions.
 - **Data flow**: End-to-end flow from entry point through transformations to output/storage.
@@ -116,7 +122,7 @@ Write a 3–5 line summary: what was built, key decisions, files modified, sugge
 
 ## Anti-patterns to avoid (universal craft rules)
 
-These apply regardless of the project. ALSO read this codebase's CLAUDE.md / README / CONTRIBUTING (or equivalent) early in Phase 2 to pick up project-specific rules and add them to your working list — local conventions usually beat generic advice when they conflict.
+These apply regardless of the project. ALSO read this codebase's CLAUDE.md / `.claude/rules/*.md` / README / CONTRIBUTING early in Phase 2 to pick up project-specific rules and add them to your working list — local conventions usually beat generic advice when they conflict.
 
 - Skipping Phase 3 because the task "seems clear." Most clear-looking tasks have hidden ambiguities. Ask anyway.
 - Adding features, abstractions, or refactors beyond what the task requires. YAGNI.
@@ -126,3 +132,10 @@ These apply regardless of the project. ALSO read this codebase's CLAUDE.md / REA
 - Changing a public function, API, or return-shape without grepping all callers first.
 - Silent error swallowing in catch blocks that masks real failures from the user.
 - Reporting UI work as complete without manually testing it (or explicitly flagging that you could not).
+
+## When NOT to use
+
+- The task is a single-file, single-function bug fix — use debug or implement; the parallel-architect machinery here is overkill.
+- The user has already produced a plan and just wants execution — use implement and skip Phases 1–5.
+- The work is purely a refactor with no behavior change — use refactor, which establishes a test baseline first.
+

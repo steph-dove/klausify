@@ -172,3 +172,12 @@ Write the final output to **REVIEW_OUTPUT.md** in this format:
 - [ ] Edge cases tested
 
 **Review method:** Parallel (4 focused sub-agents)
+
+---
+
+## When NOT to use
+
+- The user wants the diff *explained*, not critiqued — use the explain skill instead.
+- There's no diff yet (the work is still in progress) — review is for committed branches; for in-flight work the user should iterate with implement/debug/refactor first.
+- The user wants pure security audit — that's a deeper, dedicated review; this skill covers security as one of four lenses but isn't a substitute for a focused security pass.
+

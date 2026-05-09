@@ -4,19 +4,30 @@ description: Use when the user wants code, a concept, or the current diff explai
 allowed-tools: Read Grep Glob Bash(git diff *) Bash(git log *)
 ---
 
-Explain code changes or a specific concept in this project.
+## Target
 
-If the user did not name a specific target, explain the current diff:
-1. Run `git diff {{BASE_BRANCH}}...HEAD` to see all changes on this branch.
-2. If there are no committed changes, run `git diff` for unstaged and `git diff --cached` for staged changes.
-3. Read the full files involved to understand the surrounding context.
-4. Explain what changed and why, covering:
+`$ARGUMENTS`
+
+If `$ARGUMENTS` is empty, explain the current branch diff using the dump below. Otherwise, treat `$ARGUMENTS` as the target — a file path, function name, or concept — and explain that.
+
+## Current branch diff (used when target is empty)
+
+```!
+git diff {{BASE_BRANCH}}...HEAD
+```
+
+## Instructions
+
+**If the target is empty (no arguments):**
+1. The diff above shows everything changed on this branch. If it's empty, fall back to `git diff` (unstaged) and `git diff --cached` (staged).
+2. Read the full files involved to understand the surrounding context — do not paraphrase from the diff alone.
+3. Explain what changed and why, covering:
    - The purpose of the changes as a whole
    - How the modified components interact
    - Any non-obvious behavior or edge cases introduced
 
-If the user named a specific target (a file, function, or concept), explain that:
-1. Read CLAUDE.md to understand the project structure and conventions.
+**If the target is provided:**
+1. Read CLAUDE.md and any matching `.claude/rules/*.md` for the area the target lives in.
 2. Find the relevant code using Grep and Glob.
 3. Read the full files involved to understand context.
 4. Trace the call chain and data flow end-to-end.
@@ -26,8 +37,16 @@ If the user named a specific target (a file, function, or concept), explain that
    - Important design decisions or trade-offs
    - Any non-obvious behavior or edge cases
 
-Rules:
-- Tailor the depth to the question — a "what does this function do" needs less than "how does auth work".
+## Rules
+
+- Tailor the depth to the question — "what does this function do" needs less than "how does auth work".
 - Use concrete examples from the code, not abstract descriptions.
-- If something looks like a bug or smells off, mention it, but stay focused on explaining.
+- Cite file:line references when pointing at code.
+- If something looks like a bug or smells off, mention it once, then stay focused on explaining.
 - Don't suggest changes unless asked.
+
+## When NOT to use
+
+- The user wants to *change* code — use the implement, refactor, debug, or fix skill instead.
+- The user wants a code review — use the review skill, which validates findings and structures output.
+- The user wants the diff itself, not an explanation of it — they can run `git diff` directly.
