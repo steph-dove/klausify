@@ -1,14 +1,16 @@
-Here is the task to implement:
-
-$ARGUMENTS
-
 ---
+name: {{REPO}}-implement
+description: Use when the user pastes a ticket, design doc, or task description and wants it implemented. Multi-phase flow — understand, investigate (in plan mode), plan, implement, verify. Enforces strict scope rules and writes failing tests first for bug fixes.
+allowed-tools: Read Grep Glob Bash Edit Write
+---
+
+Here is the task to implement (the user described it in their message).
 
 Do NOT start coding yet. Follow these phases in strict order.
 
 ## Phase 1: Understand the Task
 
-Read the task description above carefully. Identify:
+Read the user's task description carefully. Identify:
 
 1. **What is being asked** — the specific deliverable or behavior change.
 2. **What is NOT being asked** — anything outside this scope is off-limits. Do not refactor, rename, restyle, or "improve" anything beyond the task. If you notice other issues, list them at the end but do NOT fix them.
@@ -25,8 +27,9 @@ Before touching any code, do a targeted read-only investigation. This is the mos
 ### Step 1: Orient
 
 1. **Read CLAUDE.md** for project structure, conventions, and known pitfalls.
-2. **Find the entry point.** Starting from the UI or API surface described in the task, grep for the route, component, or endpoint name. Read that file.
-3. **Confirm the data source.** Read the actual query or ORM call that provides the data for this feature — do not assume. If there are multiple levels of indirection (service calls a repository calls a query), trace until you hit the actual data access.
+2. **Read any `.claude/rules/*.md`** whose `paths:` glob matches the area you'll edit. Path-scoped rules carry layer-specific conventions (API patterns vs. DB patterns vs. UI patterns) that the project-wide CLAUDE.md doesn't.
+3. **Find the entry point.** Starting from the UI or API surface described in the task, grep for the route, component, or endpoint name. Read that file.
+4. **Confirm the data source.** Read the actual query or ORM call that provides the data for this feature — do not assume. If there are multiple levels of indirection (service calls a repository calls a query), trace until you hit the actual data access.
 
 ### Step 2: Confirm direction
 
@@ -39,7 +42,7 @@ This is your checkpoint. If any of this is wrong, the rest of the work will be w
 
 ### Step 3: Targeted deep-dive
 
-Only after confirming direction, go deeper on the files you'll actually change:
+Only after confirming direction, go deeper on the files you'll actually change. **All four reads/greps below are independent** — issue them as a single batch of parallel tool calls (one assistant message containing multiple tool_use blocks), not as a sequential loop:
 
 1. **Read each file you'll modify in full** — understand its structure, not just the function you'll edit.
 2. **Grep for callers** of any function you plan to change. Skim the results — you need to know if your change will break a caller, not understand every caller in depth. If there are many callers, note that the function is high-traffic and plan accordingly.
@@ -57,7 +60,7 @@ Still in plan mode. Design your approach before writing code. Keep it minimal �
 3. **Tests first?** If this task is a bug fix or changes existing behavior, plan to write a failing test BEFORE writing the fix. This catches regressions immediately and proves the fix actually works. For new features, tests can come after.
 4. **Check your scope.** Re-read the task description. Cross-reference every planned change against it. Remove anything that isn't directly required.
 
-**Exit plan mode to proceed to implementation.** The user will review your plan first.
+**Call `ExitPlanMode` to request approval.** Do NOT edit any files until the user approves; once they do, plan mode exits automatically and Phase 4 begins.
 
 ---
 
@@ -110,3 +113,9 @@ These are non-negotiable:
 - **Do NOT refactor surrounding code** to be "cleaner" or "more consistent."
 - **Do NOT add dependencies** without explicit justification tied to the task.
 - **If the task says "add a button,"** add a button. Don't also redesign the layout, add animations, or create a reusable button component library.
+
+## When NOT to use
+
+- The task is a bug fix where the root cause isn't obvious — use the debug skill first to diagnose, then come back here with a confirmed plan.
+- The task is "make this code cleaner / better-structured" with no behavior change — use refactor instead, which preserves behavior under a test baseline.
+- The task is multi-feature, exploratory, or has no clear acceptance criteria — use plan first, which fans out parallel architects and surfaces clarifying questions before writing code.

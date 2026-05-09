@@ -1,4 +1,4 @@
-"""MCP server for klausify — exposes klausify commands as tools."""
+"""MCP server for klausify — exposes klausify subcommands as tools."""
 
 import json
 import subprocess
@@ -34,8 +34,9 @@ def klausify_init(
 ) -> str:
     """Generate all Claude Code boilerplate for a repository.
 
-    Creates CLAUDE.md, settings.json, slash commands, hooks, PR template,
-    AGENTS.md, and .gitignore entries.
+    Creates CLAUDE.md, settings.json, repo-namespaced skills under
+    .claude/skills/<repo>-<skill>/, hook configs, the PR template, and
+    .gitignore entries.
     """
     args = ["init", "--repo", repo, "--base-branch", base_branch]
     if force:
@@ -51,7 +52,7 @@ def klausify_checklist(
     base_branch: str = "main",
     force: bool = False,
 ) -> str:
-    """Regenerate the review command from CLAUDE.md with repo-specific checks."""
+    """Regenerate the review skill from CLAUDE.md with repo-specific checks."""
     args = ["checklist", "--repo", repo, "--base-branch", base_branch]
     if force:
         args.append("--force")
@@ -67,14 +68,24 @@ def klausify_settings(repo: str = ".", force: bool = False) -> str:
     return _run_klausify(*args, cwd=repo)
 
 
+SKILL_NAMES = [
+    "review", "plan", "debug", "implement", "refactor",
+    "test", "fix", "pr", "commit", "explain", "new-worktree",
+]
+
+
 @mcp.tool()
-def klausify_commands(
+def klausify_skills(
     repo: str = ".",
     base_branch: str = "main",
     force: bool = False,
 ) -> str:
-    """Scaffold .claude/commands/ with review, test, fix, pr, commit, and debug."""
-    args = ["commands", "--repo", repo, "--base-branch", base_branch]
+    """Scaffold the bundled klausify skills as .claude/skills/<repo>-<skill>/SKILL.md.
+
+    Writes one skill directory per entry in SKILL_NAMES. See
+    src/klausify/skills.py for the current set.
+    """
+    args = ["skills", "--repo", repo, "--base-branch", base_branch]
     if force:
         args.append("--force")
     return _run_klausify(*args, cwd=repo)
@@ -84,19 +95,21 @@ def klausify_commands(
 def klausify_status(repo: str = ".") -> str:
     """Check which klausify boilerplate files exist in a repository."""
     repo_path = Path(repo).resolve()
+    # CLAUDE.md is canonically at the repo root (per Claude Code memory
+    # docs); fall back to .claude/CLAUDE.md for repos still on the legacy
+    # layout from older klausify versions.
+    claude_md_root = repo_path / "CLAUDE.md"
+    claude_md_legacy = repo_path / ".claude" / "CLAUDE.md"
     files = {
-        ".claude/CLAUDE.md": repo_path / ".claude" / "CLAUDE.md",
-        ".claude/settings.json": repo_path / ".claude" / "settings.json",
-        f".claude/commands/pr-review-{repo_path.name}.md": (
-            repo_path / ".claude" / "commands" / f"pr-review-{repo_path.name}.md"
+        "CLAUDE.md": (
+            claude_md_root if claude_md_root.exists() else claude_md_legacy
         ),
-        ".claude/commands/test.md": repo_path / ".claude" / "commands" / "test.md",
-        ".claude/commands/fix.md": repo_path / ".claude" / "commands" / "fix.md",
-        ".claude/commands/pr.md": repo_path / ".claude" / "commands" / "pr.md",
-        ".claude/commands/commit.md": repo_path / ".claude" / "commands" / "commit.md",
-        ".claude/commands/debug.md": repo_path / ".claude" / "commands" / "debug.md",
-        "AGENTS.md": repo_path / "AGENTS.md",
+        ".claude/settings.json": repo_path / ".claude" / "settings.json",
     }
+    for skill in SKILL_NAMES:
+        skill_dir = f"{repo_path.name}-{skill}"
+        rel_path = f".claude/skills/{skill_dir}/SKILL.md"
+        files[rel_path] = repo_path / ".claude" / "skills" / skill_dir / "SKILL.md"
 
     status = {}
     for name, path in files.items():

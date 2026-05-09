@@ -6,14 +6,18 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from klausify.agents import scaffold_agents
-from klausify.checklist import _parse_claude_md, generate_checklist
+from klausify.checklist import _parse_claude_md, _parse_rules_dir, generate_checklist
 from klausify.cli import app
-from klausify.commands import scaffold_commands
 from klausify.github import scaffold_github
 from klausify.gitignore import update_gitignore
 from klausify.hooks import _detect_format_command, _detect_lint_command, scaffold_hooks
 from klausify.settings import _detect_sensitive_paths, _detect_stack, generate_settings
+from klausify.skills import (
+    LEGACY_COMMAND_FILENAMES,
+    SKILL_NAMES,
+    sanitize_skill_namespace,
+    scaffold_skills,
+)
 
 runner = CliRunner()
 
@@ -48,6 +52,24 @@ A test project.
 - **ruff** ignores E501 in this project
 """
 
+SAMPLE_RULE_FILE = """\
+---
+paths:
+  - "src/api/**/*.py"
+---
+
+# Rules for `src/api/**/*.py`
+
+## Conventions
+
+- **Pydantic validation**: Uses Pydantic for input validation.
+- **Sync-first API design**: API endpoints are predominantly synchronous.
+
+## Architecture
+
+- **Direct data access pattern (API -> DB)**: API layer accesses database directly.
+"""
+
 
 @pytest.fixture()
 def repo(tmp_path: Path) -> Path:
@@ -58,7 +80,14 @@ def repo(tmp_path: Path) -> Path:
 
 @pytest.fixture()
 def repo_with_claude_md(repo: Path) -> Path:
-    """Create a repo with .claude/CLAUDE.md."""
+    """Create a repo with ./CLAUDE.md (canonical location for klausify 0.2.0+)."""
+    (repo / "CLAUDE.md").write_text(SAMPLE_CLAUDE_MD)
+    return repo
+
+
+@pytest.fixture()
+def repo_with_legacy_claude_md(repo: Path) -> Path:
+    """Create a repo with .claude/CLAUDE.md (legacy fallback location)."""
     claude_dir = repo / ".claude"
     claude_dir.mkdir()
     (claude_dir / "CLAUDE.md").write_text(SAMPLE_CLAUDE_MD)
@@ -107,103 +136,190 @@ class TestSettings:
         assert len(settings["permissions"]["deny"]) > 0
 
 
-class TestCommands:
-    def test_scaffold_commands(self, repo: Path):
-        created = scaffold_commands(repo=repo)
-        assert len(created) == 10
-        for f in created:
-            assert f.exists()
-            assert f.suffix == ".md"
-        names = [f.name for f in created]
-        assert "commit.md" in names
-        assert "debug.md" in names
-        assert f"pr-review-{repo.name}.md" in names
-        assert "review.md" not in names
+class TestSanitizeSkillNamespace:
+    def test_lowercase_alphanumeric_unchanged(self):
+        assert sanitize_skill_namespace("myapp") == "myapp"
+        assert sanitize_skill_namespace("foo-bar-123") == "foo-bar-123"
 
-    def test_scaffold_commands_idempotent(self, repo: Path):
-        scaffold_commands(repo=repo)
-        created = scaffold_commands(repo=repo)
+    def test_uppercase_lowered(self):
+        assert sanitize_skill_namespace("MyApp") == "myapp"
+
+    def test_underscores_become_hyphens(self):
+        assert sanitize_skill_namespace("my_app") == "my-app"
+
+    def test_dots_and_spaces_become_hyphens(self):
+        assert sanitize_skill_namespace("my.app v2") == "my-app-v2"
+
+    def test_runs_collapsed(self):
+        assert sanitize_skill_namespace("foo___bar") == "foo-bar"
+
+    def test_leading_trailing_stripped(self):
+        assert sanitize_skill_namespace("--foo--") == "foo"
+
+    def test_empty_falls_back(self):
+        assert sanitize_skill_namespace("") == "repo"
+        assert sanitize_skill_namespace("---") == "repo"
+
+
+class TestScaffoldSkills:
+    def test_creates_all_skills(self, repo: Path):
+        created = scaffold_skills(repo=repo)
+        # SKILL_NAMES has 11 entries; review additionally ships sub-agents.md.
+        assert len(created) == len(SKILL_NAMES) + 1
+        for path in created:
+            assert path.exists()
+
+    def test_directory_layout_namespaced(self, repo: Path):
+        scaffold_skills(repo=repo)
+        ns = sanitize_skill_namespace(repo.name)
+        for skill in SKILL_NAMES:
+            assert (repo / ".claude" / "skills" / f"{ns}-{skill}" / "SKILL.md").exists()
+
+    def test_review_ships_sub_agents_md(self, repo: Path):
+        scaffold_skills(repo=repo)
+        ns = sanitize_skill_namespace(repo.name)
+        sub_agents = repo / ".claude" / "skills" / f"{ns}-review" / "sub-agents.md"
+        assert sub_agents.exists()
+
+    def test_repo_substitution(self, repo: Path):
+        scaffold_skills(repo=repo)
+        ns = sanitize_skill_namespace(repo.name)
+        plan_md = (repo / ".claude" / "skills" / f"{ns}-plan" / "SKILL.md").read_text()
+        assert f"name: {ns}-plan" in plan_md
+        assert "{{REPO}}" not in plan_md
+
+    def test_base_branch_substitution(self, repo: Path):
+        scaffold_skills(repo=repo, base_branch="develop")
+        ns = sanitize_skill_namespace(repo.name)
+        review_md = (
+            repo / ".claude" / "skills" / f"{ns}-review" / "SKILL.md"
+        ).read_text()
+        assert "develop...HEAD" in review_md
+        assert "{{BASE_BRANCH}}" not in review_md
+
+    def test_idempotent(self, repo: Path):
+        scaffold_skills(repo=repo)
+        created = scaffold_skills(repo=repo)
         assert len(created) == 0
 
-    def test_scaffold_commands_force(self, repo: Path):
-        scaffold_commands(repo=repo)
-        created = scaffold_commands(repo=repo, force=True)
-        assert len(created) == 10
+    def test_force_rewrites(self, repo: Path):
+        scaffold_skills(repo=repo)
+        created = scaffold_skills(repo=repo, force=True)
+        assert len(created) > 0
 
-    def test_scaffold_commands_base_branch(self, repo: Path):
-        scaffold_commands(repo=repo, base_branch="dev")
-        pr_content = (repo / ".claude" / "commands" / "pr.md").read_text()
-        assert "dev..HEAD" in pr_content
-        assert "{{BASE_BRANCH}}" not in pr_content
+    def test_uppercase_repo_name_sanitized(self, tmp_path: Path):
+        repo = tmp_path / "MyApp_v2"
+        repo.mkdir()
+        scaffold_skills(repo=repo)
+        # Sanitized: MyApp_v2 -> myapp-v2
+        assert (repo / ".claude" / "skills" / "myapp-v2-plan" / "SKILL.md").exists()
+
+
+class TestLegacyCommandsMigration:
+    def test_removes_klausify_generated_files(self, repo: Path):
+        commands_dir = repo / ".claude" / "commands"
+        commands_dir.mkdir(parents=True)
+        # Mark as klausify-generated and plant the files klausify shipped pre-0.2.0.
+        (commands_dir / ".klausify-version").write_text("0.1.7\n")
+        for filename in LEGACY_COMMAND_FILENAMES:
+            (commands_dir / filename).write_text("# legacy\n")
+        (commands_dir / f"pr-review-{repo.name}.md").write_text("# legacy review\n")
+        # Also plant a user-authored file that must NOT be removed.
+        (commands_dir / "user-custom.md").write_text("# user\n")
+
+        scaffold_skills(repo=repo)
+
+        for filename in LEGACY_COMMAND_FILENAMES:
+            assert not (commands_dir / filename).exists()
+        assert not (commands_dir / f"pr-review-{repo.name}.md").exists()
+        assert not (commands_dir / ".klausify-version").exists()
+        # User file preserved.
+        assert (commands_dir / "user-custom.md").exists()
+
+    def test_skips_when_no_marker(self, repo: Path):
+        commands_dir = repo / ".claude" / "commands"
+        commands_dir.mkdir(parents=True)
+        # No .klausify-version marker -> we don't touch user-authored files.
+        (commands_dir / "test.md").write_text("# user-authored\n")
+        scaffold_skills(repo=repo)
+        assert (commands_dir / "test.md").exists()
 
 
 class TestChecklist:
     def test_parse_claude_md(self, repo_with_claude_md: Path):
-        claude_md = repo_with_claude_md / ".claude" / "CLAUDE.md"
-        sections = _parse_claude_md(claude_md)
+        sections = _parse_claude_md(repo_with_claude_md / "CLAUDE.md")
         assert len(sections["conventions"]) == 3
         assert len(sections["commands"]) == 3
         assert len(sections["pitfalls"]) == 2
 
-    def test_generate_checklist(self, repo_with_claude_md: Path):
-        path = generate_checklist(repo=repo_with_claude_md)
-        expected = f"pr-review-{repo_with_claude_md.name}.md"
-        assert path == repo_with_claude_md / ".claude" / "commands" / expected
+    def test_parse_rules_dir_with_paths_frontmatter(self, repo: Path):
+        rules_dir = repo / ".claude" / "rules"
+        rules_dir.mkdir(parents=True)
+        (rules_dir / "api.md").write_text(SAMPLE_RULE_FILE)
+
+        bullets = _parse_rules_dir(rules_dir)
+        assert len(bullets) == 3  # 2 conventions + 1 architecture
+        # Glob is preserved (the `**` doesn't get eaten by bold-strip).
+        assert all("`src/api/**/*.py`" in b for b in bullets)
+        # Bold markers stripped from rule body.
+        assert all("**" not in b.split(": ", 1)[1] for b in bullets)
+
+    def test_parse_rules_dir_missing(self, repo: Path):
+        bullets = _parse_rules_dir(repo / ".claude" / "rules")
+        assert bullets == []
+
+    def test_generate_checklist_writes_to_skill_dir(self, repo_with_claude_md: Path):
+        scaffold_skills(repo=repo_with_claude_md)
+        path = generate_checklist(repo=repo_with_claude_md, force=True)
+        ns = sanitize_skill_namespace(repo_with_claude_md.name)
+        assert path == (
+            repo_with_claude_md / ".claude" / "skills" / f"{ns}-review" / "SKILL.md"
+        )
         content = path.read_text()
         assert "snake_case" in content
         assert "`pytest`" in content
         assert "PYTHONPATH" in content
         assert "Severity: Blocker" in content
-        assert "Overall verdict" in content
 
-    def test_generate_checklist_base_branch(self, repo_with_claude_md: Path):
-        path = generate_checklist(repo=repo_with_claude_md, base_branch="develop")
-        content = path.read_text()
-        assert "develop..HEAD" in content
-        assert "{{BASE_BRANCH}}" not in content
+    def test_generate_checklist_legacy_claude_md_fallback(
+        self, repo_with_legacy_claude_md: Path
+    ):
+        # Fallback path: .claude/CLAUDE.md instead of ./CLAUDE.md
+        scaffold_skills(repo=repo_with_legacy_claude_md)
+        path = generate_checklist(repo=repo_with_legacy_claude_md, force=True)
+        assert "snake_case" in path.read_text()
 
-    def test_generate_checklist_has_triage_logic(self, repo_with_claude_md: Path):
-        path = generate_checklist(repo=repo_with_claude_md)
-        content = path.read_text()
-        assert "150 lines" in content
-        assert "Small PR Review" in content
-        assert "Parallel Review" in content
-
-    def test_generate_checklist_has_agent_prompts(self, repo_with_claude_md: Path):
-        path = generate_checklist(repo=repo_with_claude_md)
-        content = path.read_text()
-        assert "Agent 1: Correctness & Logic" in content
-        assert "Agent 2: Architecture & Design" in content
-        assert "Agent 3: Security & Quality" in content
-        assert "Agent 4: Scope & Conventions" in content
-
-    def test_generate_checklist_has_validation(self, repo_with_claude_md: Path):
-        path = generate_checklist(repo=repo_with_claude_md)
-        content = path.read_text()
-        assert "Phase 3: Validation" in content
-        assert "Trace the code path" in content
-        assert "Remove invalid findings" in content
-        # Also present in the small PR path
-        assert "Validate findings:" in content
-
-    def test_generate_checklist_has_synthesis(self, repo_with_claude_md: Path):
-        path = generate_checklist(repo=repo_with_claude_md)
-        content = path.read_text()
-        assert "Phase 4: Synthesis" in content
-        assert "Deduplicate" in content
-        assert "Review method:" in content
-
-    def test_generate_checklist_repo_checks_in_agent4(self, repo_with_claude_md: Path):
-        path = generate_checklist(repo=repo_with_claude_md)
-        content = path.read_text()
-        # Repo-specific checks should appear in Agent 4's section
-        agent4_start = content.index("Agent 4: Scope & Conventions")
-        assert "snake_case" in content[agent4_start:]
-        assert "PYTHONPATH" in content[agent4_start:]
+    def test_generate_checklist_substitutes_in_sub_agents_md(
+        self, repo_with_claude_md: Path
+    ):
+        # Regression: sub-agents.md ships with {{REPO_SPECIFIC_CHECKS}} that
+        # generate_checklist must substitute alongside SKILL.md.
+        scaffold_skills(repo=repo_with_claude_md)
+        generate_checklist(repo=repo_with_claude_md, force=True)
+        ns = sanitize_skill_namespace(repo_with_claude_md.name)
+        sub_agents = (
+            repo_with_claude_md
+            / ".claude"
+            / "skills"
+            / f"{ns}-review"
+            / "sub-agents.md"
+        )
+        content = sub_agents.read_text()
+        assert "{{REPO_SPECIFIC_CHECKS}}" not in content
+        # Repo-specific check content actually substituted in.
+        assert "snake_case" in content
 
     def test_generate_checklist_no_claude_md(self, repo: Path):
         with pytest.raises(SystemExit):
             generate_checklist(repo=repo)
+
+    def test_generate_checklist_has_triage_logic(self, repo_with_claude_md: Path):
+        scaffold_skills(repo=repo_with_claude_md)
+        path = generate_checklist(repo=repo_with_claude_md, force=True)
+        content = path.read_text()
+        assert "150 lines" in content
+        assert "Small PR Review" in content
+        assert "Parallel Review" in content
 
 
 class TestHooks:
@@ -242,20 +358,6 @@ class TestGitHub:
         docs_template.write_text("# Docs template\n")
         result = scaffold_github(repo=repo)
         assert result is None
-
-
-class TestAgents:
-    def test_scaffold_agents(self, repo: Path):
-        result = scaffold_agents(repo=repo)
-        assert result is not None
-        assert result.name == "AGENTS.md"
-        assert "CLAUDE.md" in result.read_text()
-
-    def test_scaffold_agents_skips_existing(self, repo: Path):
-        (repo / "AGENTS.md").write_text("# Custom agents\n")
-        result = scaffold_agents(repo=repo)
-        assert result is None
-        assert (repo / "AGENTS.md").read_text() == "# Custom agents\n"
 
 
 class TestGitignore:
