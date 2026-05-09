@@ -1,6 +1,12 @@
+---
+name: {{REPO}}-explain
+description: Use when the user wants code, a concept, or the current diff explained in this repo. With no specific target, explains the current branch diff; with a target, traces call chains and data flow end-to-end and explains in plain language.
+allowed-tools: Read, Grep, Glob, Bash
+---
+
 Explain code changes or a specific concept in this project.
 
-If no arguments are provided, explain the current diff:
+If the user did not name a specific target, explain the current diff:
 1. Run `git diff {{BASE_BRANCH}}...HEAD` to see all changes on this branch.
 2. If there are no committed changes, run `git diff` for unstaged and `git diff --cached` for staged changes.
 3. Read the full files involved to understand the surrounding context.
@@ -9,7 +15,7 @@ If no arguments are provided, explain the current diff:
    - How the modified components interact
    - Any non-obvious behavior or edge cases introduced
 
-If arguments are provided, explain the specified code or concept:
+If the user named a specific target (a file, function, or concept), explain that:
 1. Read CLAUDE.md to understand the project structure and conventions.
 2. Find the relevant code using Grep and Glob.
 3. Read the full files involved to understand context.
@@ -25,5 +31,3 @@ Rules:
 - Use concrete examples from the code, not abstract descriptions.
 - If something looks like a bug or smells off, mention it, but stay focused on explaining.
 - Don't suggest changes unless asked.
-
-$ARGUMENTS

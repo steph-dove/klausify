@@ -1,4 +1,4 @@
-"""Generate a repo-tailored review command from CLAUDE.md."""
+"""Generate a repo-tailored review skill from CLAUDE.md."""
 
 import re
 from importlib import resources
@@ -10,12 +10,22 @@ console = Console()
 
 
 def _read_review_template() -> str:
-    """Read the review command template."""
-    return resources.files("klausify").joinpath("templates/commands/review.md").read_text()
+    """Read the review skill template."""
+    return (
+        resources.files("klausify")
+        .joinpath("templates/skills/review/SKILL.md")
+        .read_text()
+    )
 
 
 def _parse_claude_md(claude_md: Path) -> dict[str, list[str]]:
-    """Extract key sections from CLAUDE.md for review enrichment."""
+    """Extract key sections from CLAUDE.md for review enrichment.
+
+    Conventions and Architecture sections may be path-scoped (rendered with
+    `### <glob>` subsections under the H2). Bullets nested under those
+    subheaders are collected with the glob prefixed, so the resulting bullet
+    reads like: `for src/api/**/*.py: <rule>`.
+    """
     content = claude_md.read_text()
     sections: dict[str, list[str]] = {
         "conventions": [],
@@ -25,20 +35,39 @@ def _parse_claude_md(claude_md: Path) -> dict[str, list[str]]:
     }
 
     current_section = ""
+    current_glob: str | None = None
     for line in content.splitlines():
-        heading = line.strip().lower()
-        if heading.startswith("## conventions"):
+        stripped = line.strip()
+        lower = stripped.lower()
+        if lower.startswith("## conventions"):
             current_section = "conventions"
-        elif heading.startswith("## commands"):
+            current_glob = None
+        elif lower.startswith("## commands"):
             current_section = "commands"
-        elif heading.startswith("## tech stack"):
+            current_glob = None
+        elif lower.startswith("## tech stack"):
             current_section = "tech_stack"
-        elif heading.startswith("## known pitfalls"):
+            current_glob = None
+        elif lower.startswith("## known pitfalls"):
             current_section = "pitfalls"
-        elif heading.startswith("## "):
+            current_glob = None
+        elif lower.startswith("## "):
             current_section = ""
-        elif current_section and line.strip().startswith("- "):
-            sections[current_section].append(line.strip())
+            current_glob = None
+        elif (
+            current_section in {"conventions", "pitfalls"}
+            and stripped.startswith("### ")
+        ):
+            heading = stripped[4:].strip()
+            stripped_glob = heading.strip("`")
+            current_glob = (
+                None if stripped_glob.lower() == "project-wide" else stripped_glob
+            )
+        elif current_section and stripped.startswith("- "):
+            bullet = stripped
+            if current_section in {"conventions", "pitfalls"} and current_glob:
+                bullet = f"- for `{current_glob}`: {stripped[2:]}"
+            sections[current_section].append(bullet)
 
     return sections
 
@@ -80,13 +109,13 @@ def _build_pitfall_checks(pitfalls: list[str]) -> str:
     return "\n".join(lines)
 
 
-def _review_filename(repo: Path) -> str:
-    """Return the review command filename scoped to the repo name."""
-    return f"pr-review-{repo.name}.md"
+def _review_skill_dir(repo: Path) -> str:
+    """Return the namespaced review skill directory name."""
+    return f"{repo.name}-review"
 
 
 def generate_checklist(*, repo: Path, force: bool = False, base_branch: str = "main") -> Path:
-    """Generate a review command enriched with CLAUDE.md findings."""
+    """Generate a review skill enriched with CLAUDE.md findings."""
     repo = repo.resolve()
     claude_md = repo / ".claude" / "CLAUDE.md"
 
@@ -96,7 +125,8 @@ def generate_checklist(*, repo: Path, force: bool = False, base_branch: str = "m
         )
         raise SystemExit(1)
 
-    output_file = repo / ".claude" / "commands" / _review_filename(repo)
+    skill_dir = repo / ".claude" / "skills" / _review_skill_dir(repo)
+    output_file = skill_dir / "SKILL.md"
 
     if output_file.exists() and not force:
         console.print(
@@ -105,11 +135,9 @@ def generate_checklist(*, repo: Path, force: bool = False, base_branch: str = "m
         )
         raise SystemExit(1)
 
-    # Read template and CLAUDE.md
     template = _read_review_template()
     sections = _parse_claude_md(claude_md)
 
-    # Build enrichment sections
     enrichments: list[str] = []
     conv_checks = _build_convention_checks(sections["conventions"])
     if conv_checks:
@@ -121,13 +149,12 @@ def generate_checklist(*, repo: Path, force: bool = False, base_branch: str = "m
     if pitfall_checks:
         enrichments.append(pitfall_checks)
 
-    # Merge into template
     enrichment_block = "\n\n".join(enrichments) if enrichments else ""
     output = template.replace("{{REPO_SPECIFIC_CHECKS}}", enrichment_block)
     output = output.replace("{{BASE_BRANCH}}", base_branch)
+    output = output.replace("{{REPO}}", repo.name)
 
-    # Write
-    output_file.parent.mkdir(parents=True, exist_ok=True)
+    skill_dir.mkdir(parents=True, exist_ok=True)
     output_file.write_text(output)
     console.print(f"[green]✔ Created {output_file.relative_to(repo)}[/green]")
     return output_file

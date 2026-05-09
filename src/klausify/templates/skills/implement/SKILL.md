@@ -1,14 +1,16 @@
-Here is the task to implement:
-
-$ARGUMENTS
-
 ---
+name: {{REPO}}-implement
+description: Use when the user pastes a ticket, design doc, or task description and wants it implemented. Multi-phase flow — understand, investigate (in plan mode), plan, implement, verify. Enforces strict scope rules and writes failing tests first for bug fixes.
+allowed-tools: Read, Grep, Glob, Bash, Edit, Write
+---
+
+Here is the task to implement (the user described it in their message).
 
 Do NOT start coding yet. Follow these phases in strict order.
 
 ## Phase 1: Understand the Task
 
-Read the task description above carefully. Identify:
+Read the user's task description carefully. Identify:
 
 1. **What is being asked** — the specific deliverable or behavior change.
 2. **What is NOT being asked** — anything outside this scope is off-limits. Do not refactor, rename, restyle, or "improve" anything beyond the task. If you notice other issues, list them at the end but do NOT fix them.

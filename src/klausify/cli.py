@@ -10,11 +10,11 @@ from klausify import __version__
 from klausify.agents import scaffold_agents
 from klausify.checklist import generate_checklist
 from klausify.claude_md import run_init
-from klausify.commands import scaffold_commands
 from klausify.github import scaffold_github
 from klausify.gitignore import update_gitignore
 from klausify.hooks import scaffold_hooks
 from klausify.settings import generate_settings
+from klausify.skills import scaffold_skills
 
 app = typer.Typer(name="klausify", help="Claude Code boilerplate generator.")
 console = Console()
@@ -85,10 +85,10 @@ def init(
 
     steps: list[tuple[str, callable]] = [
         ("CLAUDE.md", lambda: run_init(repo=repo, force=force, skip_enrich=skip_enrich)),
-        ("review command", lambda: generate_checklist(
+        ("review skill", lambda: generate_checklist(
             repo=repo, force=force, base_branch=base_branch,
         )),
-        ("slash commands", lambda: scaffold_commands(
+        ("skills", lambda: scaffold_skills(
             repo=repo, force=force, review_template=review_template, base_branch=base_branch,
         )),
         ("settings", lambda: generate_settings(repo=repo, force=force)),
@@ -124,23 +124,23 @@ def checklist(
 
 
 @app.command()
-def commands(
+def skills(
     repo: Path = typer.Option(".", "--repo", "-r", help="Path to the repository."),
     force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing files."),
     review_template: Path | None = typer.Option(
         None, "--review-template",
-        help="Path to a custom review prompt to use instead of the default.",
+        help="Path to a custom review skill body to use instead of the default.",
     ),
     base_branch: str | None = typer.Option(
         None, "--base-branch", "-b",
         help="Base branch for diffs (e.g. dev, main). Prompts if not provided.",
     ),
 ) -> None:
-    """Scaffold .claude/commands/ with review, test, fix, pr, commit, and debug."""
+    """Scaffold .claude/skills/<repo>-<skill>/ for review, plan, debug, and 8 others."""
     repo = repo.resolve()
     if base_branch is None:
         base_branch = _prompt_base_branch(repo)
-    scaffold_commands(
+    scaffold_skills(
         repo=repo, force=force, review_template=review_template, base_branch=base_branch,
     )
 

@@ -1,3 +1,9 @@
+---
+name: {{REPO}}-commit
+description: Use when the user wants a commit message written for currently staged changes. Reads `git diff --cached`, recent log style, and CLAUDE.md, then outputs a conventional-commit-style message — type(scope) summary + why-focused body.
+allowed-tools: Read, Bash
+---
+
 Write a commit message for the currently staged changes. Follow these steps:
 
 1. Run `git diff --cached --stat` to see what's staged.

@@ -1,4 +1,4 @@
-"""MCP server for klausify — exposes klausify commands as tools."""
+"""MCP server for klausify — exposes klausify subcommands as tools."""
 
 import json
 import subprocess
@@ -34,7 +34,7 @@ def klausify_init(
 ) -> str:
     """Generate all Claude Code boilerplate for a repository.
 
-    Creates CLAUDE.md, settings.json, slash commands, hooks, PR template,
+    Creates CLAUDE.md, settings.json, namespaced skills, hooks, PR template,
     AGENTS.md, and .gitignore entries.
     """
     args = ["init", "--repo", repo, "--base-branch", base_branch]
@@ -51,7 +51,7 @@ def klausify_checklist(
     base_branch: str = "main",
     force: bool = False,
 ) -> str:
-    """Regenerate the review command from CLAUDE.md with repo-specific checks."""
+    """Regenerate the review skill from CLAUDE.md with repo-specific checks."""
     args = ["checklist", "--repo", repo, "--base-branch", base_branch]
     if force:
         args.append("--force")
@@ -68,16 +68,22 @@ def klausify_settings(repo: str = ".", force: bool = False) -> str:
 
 
 @mcp.tool()
-def klausify_commands(
+def klausify_skills(
     repo: str = ".",
     base_branch: str = "main",
     force: bool = False,
 ) -> str:
-    """Scaffold .claude/commands/ with review, test, fix, pr, commit, and debug."""
-    args = ["commands", "--repo", repo, "--base-branch", base_branch]
+    """Scaffold .claude/skills/<repo>-<skill>/SKILL.md for review, plan, debug, and 8 others."""
+    args = ["skills", "--repo", repo, "--base-branch", base_branch]
     if force:
         args.append("--force")
     return _run_klausify(*args, cwd=repo)
+
+
+SKILL_NAMES = [
+    "review", "plan", "debug", "implement", "refactor",
+    "test", "fix", "pr", "commit", "explain", "new-worktree",
+]
 
 
 @mcp.tool()
@@ -87,16 +93,12 @@ def klausify_status(repo: str = ".") -> str:
     files = {
         ".claude/CLAUDE.md": repo_path / ".claude" / "CLAUDE.md",
         ".claude/settings.json": repo_path / ".claude" / "settings.json",
-        f".claude/commands/pr-review-{repo_path.name}.md": (
-            repo_path / ".claude" / "commands" / f"pr-review-{repo_path.name}.md"
-        ),
-        ".claude/commands/test.md": repo_path / ".claude" / "commands" / "test.md",
-        ".claude/commands/fix.md": repo_path / ".claude" / "commands" / "fix.md",
-        ".claude/commands/pr.md": repo_path / ".claude" / "commands" / "pr.md",
-        ".claude/commands/commit.md": repo_path / ".claude" / "commands" / "commit.md",
-        ".claude/commands/debug.md": repo_path / ".claude" / "commands" / "debug.md",
         "AGENTS.md": repo_path / "AGENTS.md",
     }
+    for skill in SKILL_NAMES:
+        skill_dir = f"{repo_path.name}-{skill}"
+        rel_path = f".claude/skills/{skill_dir}/SKILL.md"
+        files[rel_path] = repo_path / ".claude" / "skills" / skill_dir / "SKILL.md"
 
     status = {}
     for name, path in files.items():

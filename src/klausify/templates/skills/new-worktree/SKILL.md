@@ -1,4 +1,10 @@
-Create a new git worktree for the task described below.
+---
+name: {{REPO}}-new-worktree
+description: Use when the user wants a new git worktree created for a task. Picks a kebab-case branch name with a fix/feat/chore/docs/refactor prefix, runs `git worktree add` from the configured base branch, and reports the new path.
+allowed-tools: Read, Bash
+---
+
+Create a new git worktree for the task the user described.
 
 1. Read CLAUDE.md to understand the project structure and branching conventions.
 2. Create a short, descriptive branch name based on the task (e.g. `fix/login-redirect`, `feat/add-search`).
@@ -11,5 +17,3 @@ Rules:
 - Use lowercase kebab-case for branch names.
 - Prefix with `fix/`, `feat/`, `chore/`, `docs/`, or `refactor/` as appropriate.
 - Do not start work in the worktree — just create it and report the path.
-
-$ARGUMENTS
