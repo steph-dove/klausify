@@ -137,7 +137,7 @@ def skills(
         help="Base branch for diffs (e.g. dev, main). Prompts if not provided.",
     ),
 ) -> None:
-    """Scaffold .claude/skills/<repo>-<skill>/ for review, plan, debug, and 8 others."""
+    """Scaffold .claude/skills/<repo>-<skill>/ for every bundled klausify skill."""
     repo = repo.resolve()
     if base_branch is None:
         base_branch = _prompt_base_branch(repo)

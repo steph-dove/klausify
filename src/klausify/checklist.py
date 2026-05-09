@@ -6,6 +6,8 @@ from pathlib import Path
 
 from rich.console import Console
 
+from klausify.skills import sanitize_skill_namespace
+
 console = Console()
 
 
@@ -148,7 +150,7 @@ def _build_pitfall_checks(pitfalls: list[str]) -> str:
 
 def _review_skill_dir(repo: Path) -> str:
     """Return the namespaced review skill directory name."""
-    return f"{repo.name}-review"
+    return f"{sanitize_skill_namespace(repo.name)}-review"
 
 
 def generate_checklist(*, repo: Path, force: bool = False, base_branch: str = "main") -> Path:
@@ -192,11 +194,26 @@ def generate_checklist(*, repo: Path, force: bool = False, base_branch: str = "m
         enrichments.append(pitfall_checks)
 
     enrichment_block = "\n\n".join(enrichments) if enrichments else ""
-    output = template.replace("{{REPO_SPECIFIC_CHECKS}}", enrichment_block)
-    output = output.replace("{{BASE_BRANCH}}", base_branch)
-    output = output.replace("{{REPO}}", repo.name)
+    repo_namespace = sanitize_skill_namespace(repo.name)
+
+    def _substitute(text: str) -> str:
+        return (
+            text.replace("{{REPO_SPECIFIC_CHECKS}}", enrichment_block)
+            .replace("{{BASE_BRANCH}}", base_branch)
+            .replace("{{REPO}}", repo_namespace)
+        )
 
     skill_dir.mkdir(parents=True, exist_ok=True)
-    output_file.write_text(output)
+    output_file.write_text(_substitute(template))
     console.print(f"[green]✔ Created {output_file.relative_to(repo)}[/green]")
+
+    # Sub-agents.md uses {{REPO_SPECIFIC_CHECKS}} too (sub-agent 4's
+    # Project Conventions block). scaffold_skills writes it with {{REPO}}
+    # and {{BASE_BRANCH}} substituted but leaves the enrichment placeholder
+    # alone — finalize it here so the parallel-review path doesn't ship the
+    # literal token to the model.
+    sub_agents_file = skill_dir / "sub-agents.md"
+    if sub_agents_file.exists():
+        sub_agents_file.write_text(_substitute(sub_agents_file.read_text()))
+
     return output_file

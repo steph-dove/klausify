@@ -1,5 +1,6 @@
 """Scaffold .claude/skills/ with namespaced Claude Code skills."""
 
+import re
 from importlib import resources
 from pathlib import Path
 
@@ -42,9 +43,24 @@ LEGACY_COMMAND_FILENAMES = [
 ]
 
 
+def sanitize_skill_namespace(name: str) -> str:
+    """Coerce a string into the kebab-case form Claude Code requires for skill names.
+
+    The skill `name` field accepts only `[a-z0-9-]+`. Repo basenames in the
+    wild can be uppercase, snake_case, or contain dots/spaces; passing them
+    through verbatim would produce skills Claude Code refuses to load. Apply
+    a deterministic normalization: lowercase, swap any non-alphanumeric run
+    for a single hyphen, trim leading/trailing hyphens. Falls back to
+    "repo" for the degenerate empty-after-sanitization case.
+    """
+    cleaned = re.sub(r"[^a-z0-9-]+", "-", name.lower())
+    cleaned = re.sub(r"-+", "-", cleaned).strip("-")
+    return cleaned or "repo"
+
+
 def _skill_dir_name(repo: Path, skill: str) -> str:
     """Return the namespaced skill directory name (e.g., 'myapp-plan')."""
-    return f"{repo.name}-{skill}"
+    return f"{sanitize_skill_namespace(repo.name)}-{skill}"
 
 
 def _read_version(marker_dir: Path) -> str | None:
@@ -117,8 +133,10 @@ def scaffold_skills(
     created: list[Path] = []
     templates = resources.files("klausify").joinpath("templates/skills")
 
+    repo_namespace = sanitize_skill_namespace(repo.name)
+
     def _substitute(text: str) -> str:
-        return text.replace("{{REPO}}", repo.name).replace(
+        return text.replace("{{REPO}}", repo_namespace).replace(
             "{{BASE_BRANCH}}", base_branch
         )
 

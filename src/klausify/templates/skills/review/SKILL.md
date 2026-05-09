@@ -132,7 +132,7 @@ Write this output to `REVIEW_OUTPUT.md`.
 
 This PR is large enough to benefit from focused, parallel review.
 
-1. **Read `.claude/skills/{{REPO}}-review/sub-agents.md`.** That file has a shared **Common scaffold** (intro, output format, ground rules) plus five sub-agent **Lens** sections: Correctness & Logic, Architecture & Design, Security & Quality, Scope & Conventions, and **Agentic & Evals** (conditional — see step 3).
+1. **Read `.claude/skills/{{REPO}}-review/sub-agents.md`.** That file has a shared **Common scaffold** (intro, output format, ground rules) plus the sub-agent **Lens** sections: Correctness & Logic, Architecture & Design, Security & Quality, Scope & Conventions, and Agentic & Evals (conditional — see step 3).
 2. **Compose each sub-agent's prompt** by concatenating: the Common scaffold (with `[PASTE THE FULL DIFF HERE]` and `[PASTE THE COMMIT LOG HERE]` replaced by the actual diff and log from Phase 1), then the sub-agent's Lens, then its Additional rules (if any). The "How to compose a sub-agent prompt" section at the top of `sub-agents.md` documents this exactly.
 3. **Decide whether to spawn sub-agent 5 (Agentic & Evals).** Skim the diff for AI / agent / eval signals — changes under `**/skills/**`, `**/agents/**`, `**/.claude/**`, MCP server files (`mcp_*.{py,ts,js}`, `mcp-server*.*`, `.mcp.json`), eval suites (`**/evals/**`, `eval_*.{py,ts,js}`, `*.eval.*`), or imports of `anthropic` / `openai` / `langchain` / `langgraph` / `mcp` / `@anthropic-ai/sdk` / `inspect_ai` / `langsmith` / `promptfoo`. If any signal is present, include sub-agent 5; otherwise skip it (it has nothing to review). The full detection list is at the top of sub-agent 5 in `sub-agents.md`.
 4. **Use the Agent tool to launch all selected sub-agents in a single assistant message** — that gives you parallel execution. Each call passes `subagent_type: general-purpose` and the composed body from step 2. Sub-agents return findings as text and must NOT write any files.
@@ -194,7 +194,7 @@ Write the final output to **REVIEW_OUTPUT.md** in this format:
 - [ ] Adequate test coverage for changes
 - [ ] Edge cases tested
 
-**Review method:** Parallel (4–5 focused sub-agents — sub-agent 5 conditional on AI/agent/eval signals)
+**Review method:** Parallel sub-agents (Agentic & Evals lens included only when the diff touches AI/agent/eval code)
 
 ---
 
