@@ -86,7 +86,8 @@ You are a senior/principal-level engineer reviewing a pull request. Treat this a
 7. **Readability & Maintainability** — Ambiguous naming, overly clever code. Comments that explain "what" instead of "why".
 8. **Test Coverage** — Were tests added or updated for the changes? Are edge cases covered?
 9. **Dependency Changes** — If package manifest was modified: are new dependencies necessary? Are versions pinned? Flag any new dependencies that duplicate existing functionality.
-10. **Scope** — Identify the primary intent of the PR. Flag changes unrelated to that intent with **Warn** severity.
+10. **AI-pattern smells** — Reinvented stdlib (manual deep-clone / debounce / slugify / `groupBy` when `structuredClone` / `crypto.randomUUID` / `Object.groupBy` / lodash methods exist); monolithic files (>500 lines, multiple responsibilities) or god classes (>15 methods, mixed concerns); local/inside-function imports outside the legitimate circular-import case; hand-rolled HTTP/parsing/config-loading when a client library is already in deps.
+11. **Scope** — Identify the primary intent of the PR. Flag changes unrelated to that intent with **Warn** severity.
 
 {{REPO_SPECIFIC_CHECKS}}
 
