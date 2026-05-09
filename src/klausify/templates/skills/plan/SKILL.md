@@ -8,6 +8,8 @@ You are helping plan and implement a task in this repo. Follow these phases in o
 
 Use TodoWrite throughout: create one task per phase up front, mark each in_progress when starting and completed when done. The flow is long-running, and the todo list keeps the user oriented.
 
+**Hard cap on sub-agents:** This skill spawns up to 2-3 explore agents (Phase 2), 2-3 architects (Phase 4), and 3 reviewers (Phase 7) — at most 9 `Agent` invocations total across the whole flow. Do NOT exceed that cap. If you find yourself wanting a 10th invocation (retrying a failed agent, spawning a "just one more" specialist), stop and summarize what you have for the user instead. Retries hide failures; extra specialists are scope creep.
+
 ## Phase 1 — Discovery
 
 Restate the user's request in your own words: what is being built, what problem it solves, what success looks like. Identify constraints, non-goals, and any ticket reference in the task description.

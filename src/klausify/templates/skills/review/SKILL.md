@@ -132,7 +132,7 @@ Write this output to `REVIEW_OUTPUT.md`.
 
 This PR is large enough to benefit from focused, parallel review.
 
-1. **Read `.claude/skills/{{REPO}}-review/sub-agents.md`.** That file has a shared **Common scaffold** (intro, output format, ground rules) plus the sub-agent **Lens** sections: Correctness & Logic, Architecture & Design, Security & Quality, Scope & Conventions, and Agentic & Evals (conditional — see step 3).
+1. **Read `.claude/skills/{{REPO}}-review/sub-agents.md`.** That file has the canonical list of sub-agent **Lens** sections plus a shared **Common scaffold** (intro, output format, ground rules). Some lenses are conditional — see step 3 for the detection-driven ones.
 2. **Compose each sub-agent's prompt** by concatenating: the Common scaffold (with `[PASTE THE FULL DIFF HERE]` and `[PASTE THE COMMIT LOG HERE]` replaced by the actual diff and log from Phase 1), then the sub-agent's Lens, then its Additional rules (if any). The "How to compose a sub-agent prompt" section at the top of `sub-agents.md` documents this exactly.
 3. **Decide whether to spawn sub-agent 5 (Agentic & Evals).** Skim the diff for AI / agent / eval signals — changes under `**/skills/**`, `**/agents/**`, `**/.claude/**`, MCP server files (`mcp_*.{py,ts,js}`, `mcp-server*.*`, `.mcp.json`), eval suites (`**/evals/**`, `eval_*.{py,ts,js}`, `*.eval.*`), or imports of `anthropic` / `openai` / `langchain` / `langgraph` / `mcp` / `@anthropic-ai/sdk` / `inspect_ai` / `langsmith` / `promptfoo`. If any signal is present, include sub-agent 5; otherwise skip it (it has nothing to review). The full detection list is at the top of sub-agent 5 in `sub-agents.md`.
 4. **Use the Agent tool to launch all selected sub-agents in a single assistant message** — that gives you parallel execution. Each call passes `subagent_type: general-purpose` and the composed body from step 2. Sub-agents return findings as text and must NOT write any files.
@@ -202,5 +202,5 @@ Write the final output to **REVIEW_OUTPUT.md** in this format:
 
 - The user wants the diff *explained*, not critiqued — use the explain skill instead.
 - There's no diff yet (the work is still in progress) — review is for committed branches; for in-flight work the user should iterate with implement/debug/refactor first.
-- The user wants pure security audit — that's a deeper, dedicated review; this skill covers security as one of four lenses but isn't a substitute for a focused security pass.
+- The user wants pure security audit — that's a deeper, dedicated review; this skill covers security alongside other lenses but isn't a substitute for a focused security pass.
 
