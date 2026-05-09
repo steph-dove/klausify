@@ -85,11 +85,14 @@ def init(
 
     steps: list[tuple[str, callable]] = [
         ("CLAUDE.md", lambda: run_init(repo=repo, force=force, skip_enrich=skip_enrich)),
-        ("review skill", lambda: generate_checklist(
-            repo=repo, force=force, base_branch=base_branch,
-        )),
+        # `skills` writes the default review SKILL.md; `review enrichment` then
+        # overwrites it with the same template plus per-repo {{REPO_SPECIFIC_CHECKS}}.
+        # Reverse the order and the enrichment is silently overwritten.
         ("skills", lambda: scaffold_skills(
             repo=repo, force=force, review_template=review_template, base_branch=base_branch,
+        )),
+        ("review enrichment", lambda: generate_checklist(
+            repo=repo, force=True, base_branch=base_branch,
         )),
         ("settings", lambda: generate_settings(repo=repo, force=force)),
         ("hooks", lambda: scaffold_hooks(repo=repo, force=force)),

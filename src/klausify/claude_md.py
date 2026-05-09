@@ -10,10 +10,14 @@ console = Console()
 
 
 def run_init(*, repo: Path, force: bool = False, skip_enrich: bool = False) -> Path:
-    """Run conventions-cli discover --claude [--init] to produce .claude/CLAUDE.md."""
+    """Run conventions-cli discover --claude [--init] to produce ./CLAUDE.md.
+
+    As of conventions-cli 1.4.0 the canonical location for the generated file
+    is the repo root (./CLAUDE.md), with path-scoped rules emitted as
+    `.claude/rules/<name>.md` files alongside.
+    """
     repo = repo.resolve()
-    claude_dir = repo / ".claude"
-    claude_md = claude_dir / "CLAUDE.md"
+    claude_md = repo / "CLAUDE.md"
 
     if claude_md.exists() and not force:
         console.print(
@@ -58,6 +62,15 @@ def run_init(*, repo: Path, force: bool = False, skip_enrich: bool = False) -> P
     if claude_md.exists():
         console.print(f"[green]✔ Created {claude_md.relative_to(repo)}[/green]")
     else:
+        # Older conventions-cli (<1.4.0) wrote to .claude/CLAUDE.md when --claude
+        # was passed. Fall back to that location if the root file is missing.
+        legacy_path = repo / ".claude" / "CLAUDE.md"
+        if legacy_path.exists():
+            console.print(
+                f"[yellow]⚠ CLAUDE.md found at legacy path {legacy_path.relative_to(repo)}; "
+                "upgrade conventions-cli >= 1.4.0 for repo-root output.[/yellow]"
+            )
+            return legacy_path
         console.print(
             "[yellow]⚠ CLAUDE.md was not created — check conventions-cli output.[/yellow]"
         )

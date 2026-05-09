@@ -1,4 +1,4 @@
-"""Generate a repo-tailored review skill from CLAUDE.md."""
+"""Generate a repo-tailored review skill from CLAUDE.md and .claude/rules/."""
 
 import re
 from importlib import resources
@@ -18,13 +18,25 @@ def _read_review_template() -> str:
     )
 
 
-def _parse_claude_md(claude_md: Path) -> dict[str, list[str]]:
-    """Extract key sections from CLAUDE.md for review enrichment.
+def _resolve_claude_md(repo: Path) -> Path | None:
+    """Return the canonical CLAUDE.md path, preferring repo root over .claude/.
 
-    Conventions and Architecture sections may be path-scoped (rendered with
-    `### <glob>` subsections under the H2). Bullets nested under those
-    subheaders are collected with the glob prefixed, so the resulting bullet
-    reads like: `for src/api/**/*.py: <rule>`.
+    Both locations are valid per Claude Code docs; root is canonical for
+    Claude Code 2.x and the conventions-cli 1.4.0+ default.
+    """
+    for candidate in (repo / "CLAUDE.md", repo / ".claude" / "CLAUDE.md"):
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _parse_claude_md(claude_md: Path) -> dict[str, list[str]]:
+    """Extract project-wide sections from CLAUDE.md for review enrichment.
+
+    Path-scoped rules live in `.claude/rules/*.md` in conventions-cli 1.4.0+
+    and are read separately by `_parse_rules_dir`. CLAUDE.md only contains
+    project-wide content, so this parser is intentionally simple — collect
+    bullets under recognized H2 sections.
     """
     content = claude_md.read_text()
     sections: dict[str, list[str]] = {
@@ -35,41 +47,66 @@ def _parse_claude_md(claude_md: Path) -> dict[str, list[str]]:
     }
 
     current_section = ""
-    current_glob: str | None = None
     for line in content.splitlines():
         stripped = line.strip()
         lower = stripped.lower()
         if lower.startswith("## conventions"):
             current_section = "conventions"
-            current_glob = None
         elif lower.startswith("## commands"):
             current_section = "commands"
-            current_glob = None
         elif lower.startswith("## tech stack"):
             current_section = "tech_stack"
-            current_glob = None
         elif lower.startswith("## known pitfalls"):
             current_section = "pitfalls"
-            current_glob = None
         elif lower.startswith("## "):
             current_section = ""
-            current_glob = None
-        elif (
-            current_section in {"conventions", "pitfalls"}
-            and stripped.startswith("### ")
-        ):
-            heading = stripped[4:].strip()
-            stripped_glob = heading.strip("`")
-            current_glob = (
-                None if stripped_glob.lower() == "project-wide" else stripped_glob
-            )
         elif current_section and stripped.startswith("- "):
-            bullet = stripped
-            if current_section in {"conventions", "pitfalls"} and current_glob:
-                bullet = f"- for `{current_glob}`: {stripped[2:]}"
-            sections[current_section].append(bullet)
+            sections[current_section].append(stripped)
 
     return sections
+
+
+def _parse_rules_dir(rules_dir: Path) -> list[str]:
+    r"""Read `.claude/rules/*.md` files and return path-scoped bullets.
+
+    Each rules file has YAML frontmatter with a `paths:` field (list of
+    globs) and a body containing `## Conventions` and/or `## Architecture`
+    bullets. Returns bullets formatted as `for \`<glob>\`: <rule>`.
+    """
+    if not rules_dir.exists():
+        return []
+
+    bullets: list[str] = []
+    for rules_file in sorted(rules_dir.glob("*.md")):
+        text = rules_file.read_text()
+        if not text.startswith("---"):
+            continue
+        end = text.find("\n---", 3)
+        if end == -1:
+            continue
+        frontmatter = text[3:end]
+        body = text[end + 4:]
+
+        path_matches = re.findall(r'-\s*"([^"]+)"', frontmatter)
+        if not path_matches:
+            path_matches = re.findall(r"-\s*'([^']+)'", frontmatter)
+        if not path_matches:
+            continue
+        glob_label = ", ".join(f"`{p}`" for p in path_matches)
+
+        for line in body.splitlines():
+            stripped = line.strip()
+            if not stripped.startswith("- "):
+                continue
+            # Strip `**bold**` markers from the rule body BEFORE composing the
+            # output bullet. Otherwise the `**` from the glob pattern (e.g.
+            # `src/api/**/*.py`) and the `**` opening the title both feed into
+            # _build_convention_checks's bold-strip regex, which greedily
+            # pairs them and silently eats the glob.
+            rule_body = re.sub(r"\*\*(.+?)\*\*", r"\1", stripped[2:])
+            bullets.append(f"- for {glob_label}: {rule_body}")
+
+    return bullets
 
 
 def _build_convention_checks(conventions: list[str]) -> str:
@@ -115,13 +152,14 @@ def _review_skill_dir(repo: Path) -> str:
 
 
 def generate_checklist(*, repo: Path, force: bool = False, base_branch: str = "main") -> Path:
-    """Generate a review skill enriched with CLAUDE.md findings."""
+    """Generate a review skill enriched with CLAUDE.md and .claude/rules/ findings."""
     repo = repo.resolve()
-    claude_md = repo / ".claude" / "CLAUDE.md"
+    claude_md = _resolve_claude_md(repo)
 
-    if not claude_md.exists():
+    if claude_md is None:
         console.print(
-            "[red]✗ .claude/CLAUDE.md not found. Run `klausify init` first.[/red]"
+            "[red]✗ CLAUDE.md not found at ./CLAUDE.md or ./.claude/CLAUDE.md. "
+            "Run `klausify init` first.[/red]"
         )
         raise SystemExit(1)
 
@@ -137,9 +175,13 @@ def generate_checklist(*, repo: Path, force: bool = False, base_branch: str = "m
 
     template = _read_review_template()
     sections = _parse_claude_md(claude_md)
+    path_scoped_bullets = _parse_rules_dir(repo / ".claude" / "rules")
+
+    project_wide = list(sections["conventions"])
+    project_wide.extend(path_scoped_bullets)
 
     enrichments: list[str] = []
-    conv_checks = _build_convention_checks(sections["conventions"])
+    conv_checks = _build_convention_checks(project_wide)
     if conv_checks:
         enrichments.append(conv_checks)
     cmd_checks = _build_command_checks(sections["commands"])

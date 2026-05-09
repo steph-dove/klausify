@@ -48,7 +48,9 @@ List the ambiguities, edge cases, scope boundaries, error-handling preferences, 
 
 If the user replies "your call" or "no preference," commit to a recommendation and explicitly confirm it.
 
-## Phase 4 — Design (parallel architectures)
+## Phase 4 — Design (parallel architectures, in plan mode)
+
+**Enter plan mode now** — design and approval must happen before any edits. Stay in plan mode through Phase 5.
 
 Launch 2–3 architect subagents IN PARALLEL via the Agent tool with `subagent_type: general-purpose`. Pass each agent the architect process below + their priority + the user's task + the answers from Phase 3 + the file list and findings from Phase 2 — they need all of that inline.
 
@@ -72,7 +74,7 @@ After agents return, present the user a brief summary of each blueprint, the tra
 
 ## Phase 5 — Approval gate
 
-Enter plan mode, write the chosen plan to the plan file, and call ExitPlanMode to request approval. Do NOT edit any files until the user approves.
+Still in plan mode. Write the chosen plan to the plan file, and call ExitPlanMode to request approval. Do NOT edit any files until the user approves. Once approved, plan mode exits automatically and Phase 6 begins.
 
 ## Phase 6 — Implementation
 

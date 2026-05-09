@@ -117,30 +117,47 @@ def scaffold_skills(
     created: list[Path] = []
     templates = resources.files("klausify").joinpath("templates/skills")
 
+    def _substitute(text: str) -> str:
+        return text.replace("{{REPO}}", repo.name).replace(
+            "{{BASE_BRANCH}}", base_branch
+        )
+
     for skill in SKILL_NAMES:
         skill_dir = skills_dir / _skill_dir_name(repo, skill)
         skill_dir.mkdir(parents=True, exist_ok=True)
-        target = skill_dir / "SKILL.md"
+        skill_template_dir = templates.joinpath(skill)
 
-        # The review skill alone supports a custom template override (since it
-        # also receives repo-specific check enrichment via `klausify checklist`).
-        if skill == "review" and review_template is not None:
-            content = review_template.read_text()
-        else:
-            content = templates.joinpath(skill).joinpath("SKILL.md").read_text()
+        # Copy every template file in the skill dir. Skills like `review` ship
+        # supporting files (e.g. sub-agents.md) alongside SKILL.md and need
+        # them all written for the skill to function.
+        for template_file in skill_template_dir.iterdir():
+            filename = template_file.name
+            target = skill_dir / filename
 
-        content = content.replace("{{REPO}}", repo.name)
-        content = content.replace("{{BASE_BRANCH}}", base_branch)
+            # The review skill alone supports a custom SKILL.md override (since
+            # it also receives repo-specific check enrichment via `klausify
+            # checklist`). Sibling files like sub-agents.md still come from the
+            # built-in templates.
+            if (
+                skill == "review"
+                and filename == "SKILL.md"
+                and review_template is not None
+            ):
+                content = review_template.read_text()
+            else:
+                content = template_file.read_text()
 
-        if target.exists() and target.read_text() == content and not force:
-            console.print(
-                f"[dim]  {target.relative_to(repo)} unchanged, skipping.[/dim]"
-            )
-            continue
+            content = _substitute(content)
 
-        target.write_text(content)
-        created.append(target)
-        console.print(f"[green]✔ Created {target.relative_to(repo)}[/green]")
+            if target.exists() and target.read_text() == content and not force:
+                console.print(
+                    f"[dim]  {target.relative_to(repo)} unchanged, skipping.[/dim]"
+                )
+                continue
+
+            target.write_text(content)
+            created.append(target)
+            console.print(f"[green]✔ Created {target.relative_to(repo)}[/green]")
 
     _write_version(skills_dir)
 
