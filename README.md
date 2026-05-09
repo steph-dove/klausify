@@ -54,7 +54,7 @@ That's it. You'll be prompted for your base branch (auto-detects `dev`, `main`, 
 
 | Skill | What it does | Output |
 |-------|-------------|--------|
-| `<repo>-review` | Senior-level PR review against your base branch. Small PRs get a single-pass review; larger PRs fan out to parallel sub-agents (correctness, architecture, security, scope) with a validation phase that removes false positives | `REVIEW_OUTPUT.md` |
+| `<repo>-review` | Senior-level PR review against your base branch. Small PRs get a single-pass review; larger PRs fan out to parallel sub-agents (correctness, architecture, security, scope, plus an Agentic & Evals lens when the diff touches AI/agent/eval code) with a validation phase that removes false positives | `REVIEW_OUTPUT.md` |
 | `<repo>-plan` | Multi-phase task planning + implementation: discovery → parallel exploration → clarify → parallel architectures → approval → implement → parallel review → summary | — |
 | `<repo>-test` | Writes tests for current changes matching your repo's test patterns. Covers happy path, edge cases, and error paths without over-mocking | — |
 | `<repo>-fix` | Fixes all lint, format, and type errors | — |

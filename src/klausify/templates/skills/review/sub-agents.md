@@ -1,16 +1,16 @@
 # Parallel review sub-agent prompts
 
-Loaded by `{{REPO}}-review` Phase 2 when the diff is ≥ 150 lines. The four sub-agents share a common scaffold (intro, context, output format, ground rules) and each adds its own focused lens.
+Loaded by `{{REPO}}-review` Phase 2 when the diff is ≥ 150 lines. The sub-agents share a common scaffold (intro, context, output format, ground rules) and each adds its own focused lens. Sub-agents 1–4 always run; Sub-agent 5 (Agentic & Evals) is conditional — see its detection signals at the top of its section below.
 
 ## How to compose a sub-agent prompt
 
-For each of the four sub-agents below, build the prompt body as:
+For each selected sub-agent, build the prompt body as:
 
 1. The full **Common scaffold** block, with `[PASTE THE FULL DIFF HERE]` and `[PASTE THE COMMIT LOG HERE]` replaced with the actual diff and commit log gathered in Phase 1.
 2. The sub-agent's `## Lens` section verbatim.
 3. The sub-agent's `## Additional rules` section (if it has one).
 
-Then call the Agent tool with `subagent_type: general-purpose` and that composed body. Launch all four sub-agents **in a single assistant message** (parallel tool calls), not sequentially. Each sub-agent must NOT write any files — they return findings as text.
+Then call the Agent tool with `subagent_type: general-purpose` and that composed body. Launch all selected sub-agents **in a single assistant message** (parallel tool calls), not sequentially. Each sub-agent must NOT write any files — they return findings as text.
 
 ---
 
@@ -213,7 +213,7 @@ If, after reading the diff, you find no AI / agent / eval changes, return one li
 - **Unbounded agent loops** — recursion or `while True:` driving model calls with no max-iteration / max-cost guard. Cite the exit condition (or absence).
 - **Token / context-window math** — system prompt + tools + history sized close to the model's window with no truncation strategy. Long static prefixes added to a chat history accumulator are a slow-burn defect.
 - **Sensitive data sent to LLM** without redaction: PII, secrets, internal API URLs, customer-specific identifiers. Especially in tool descriptions, dynamic context injection (`` !`<command>` ``), and retrieved-document chunks.
-- **Tool / function-call schema issues**: tool descriptions exceeding Anthropic's 1,024-char tool description cap (or 1,536-char skill description+when_to_use cap); `required` fields missing or wrong; tool-name collisions across multiple registered tools; ambiguous parameter names.
+- **Tool / function-call schema issues**: missing or wrong `required` fields; tool-name collisions across multiple registered tools; ambiguous parameter names. For Anthropic SDK tool definitions, descriptions exceeding 1,024 characters get truncated. For Claude Code skills, the combined `description` + `when_to_use` text is capped at 1,536 characters per skill (per `code.claude.com/docs/en/skills.md` frontmatter table).
 - **LLM error paths quietly swallowed**: rate-limit (429) without retry/backoff, malformed-JSON parse, refusal, timeout, context-length-exceeded — bare `except:` / `catch (e)` blocks around an LLM call are almost always defects.
 - **System prompt or skill body changed without a version bump** — silent behavior shifts. Look for prompt edits in the diff that don't bump a version constant, invalidate a cache, or note the change in CHANGELOG.
 - **Streaming vs non-streaming**: long calls (>10s expected) made non-streaming where users see no progress; OR streaming used for short structured calls where the parsing overhead isn't justified.

@@ -34,8 +34,9 @@ def klausify_init(
 ) -> str:
     """Generate all Claude Code boilerplate for a repository.
 
-    Creates CLAUDE.md, settings.json, namespaced skills, hooks, PR template,
-    AGENTS.md, and .gitignore entries.
+    Creates CLAUDE.md, settings.json, repo-namespaced skills under
+    .claude/skills/<repo>-<skill>/, hook configs, the PR template, and
+    .gitignore entries.
     """
     args = ["init", "--repo", repo, "--base-branch", base_branch]
     if force:
@@ -81,8 +82,8 @@ def klausify_skills(
 ) -> str:
     """Scaffold the bundled klausify skills as .claude/skills/<repo>-<skill>/SKILL.md.
 
-    Writes one skill directory per entry in SKILL_NAMES (review, plan, debug,
-    implement, refactor, test, fix, pr, commit, explain, new-worktree).
+    Writes one skill directory per entry in SKILL_NAMES. See
+    src/klausify/skills.py for the current set.
     """
     args = ["skills", "--repo", repo, "--base-branch", base_branch]
     if force:
@@ -94,10 +95,16 @@ def klausify_skills(
 def klausify_status(repo: str = ".") -> str:
     """Check which klausify boilerplate files exist in a repository."""
     repo_path = Path(repo).resolve()
+    # CLAUDE.md is canonically at the repo root (per Claude Code memory
+    # docs); fall back to .claude/CLAUDE.md for repos still on the legacy
+    # layout from older klausify versions.
+    claude_md_root = repo_path / "CLAUDE.md"
+    claude_md_legacy = repo_path / ".claude" / "CLAUDE.md"
     files = {
-        ".claude/CLAUDE.md": repo_path / ".claude" / "CLAUDE.md",
+        "CLAUDE.md": (
+            claude_md_root if claude_md_root.exists() else claude_md_legacy
+        ),
         ".claude/settings.json": repo_path / ".claude" / "settings.json",
-        "AGENTS.md": repo_path / "AGENTS.md",
     }
     for skill in SKILL_NAMES:
         skill_dir = f"{repo_path.name}-{skill}"
