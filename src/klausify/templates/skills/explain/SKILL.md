@@ -1,7 +1,7 @@
 ---
 name: {{REPO}}-explain
 description: Use when the user wants code, a concept, or the current diff explained in this repo. With no specific target, explains the current branch diff; with a target, traces call chains and data flow end-to-end and explains in plain language.
-allowed-tools: Read, Grep, Glob, Bash
+allowed-tools: Read Grep Glob Bash(git diff *) Bash(git log *)
 ---
 
 Explain code changes or a specific concept in this project.

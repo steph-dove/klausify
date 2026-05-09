@@ -1,7 +1,7 @@
 ---
 name: {{REPO}}-debug
 description: Use when the user reports an error, bug, or unexpected behavior in this repo and wants help diagnosing it. Five phases — reproduce, diagnose root cause (read-only), write a failing test, fix, verify against the full suite.
-allowed-tools: Read, Grep, Glob, Bash, Edit, Write
+allowed-tools: Read Grep Glob Bash Edit Write
 ---
 
 Debug the error or issue the user described. Do NOT jump to a fix. Follow these phases in order.

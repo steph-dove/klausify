@@ -67,23 +67,27 @@ def klausify_settings(repo: str = ".", force: bool = False) -> str:
     return _run_klausify(*args, cwd=repo)
 
 
+SKILL_NAMES = [
+    "review", "plan", "debug", "implement", "refactor",
+    "test", "fix", "pr", "commit", "explain", "new-worktree",
+]
+
+
 @mcp.tool()
 def klausify_skills(
     repo: str = ".",
     base_branch: str = "main",
     force: bool = False,
 ) -> str:
-    """Scaffold .claude/skills/<repo>-<skill>/SKILL.md for review, plan, debug, and 8 others."""
+    """Scaffold the bundled klausify skills as .claude/skills/<repo>-<skill>/SKILL.md.
+
+    Writes one skill directory per entry in SKILL_NAMES (review, plan, debug,
+    implement, refactor, test, fix, pr, commit, explain, new-worktree).
+    """
     args = ["skills", "--repo", repo, "--base-branch", base_branch]
     if force:
         args.append("--force")
     return _run_klausify(*args, cwd=repo)
-
-
-SKILL_NAMES = [
-    "review", "plan", "debug", "implement", "refactor",
-    "test", "fix", "pr", "commit", "explain", "new-worktree",
-]
 
 
 @mcp.tool()

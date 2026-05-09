@@ -1,7 +1,8 @@
 ---
 name: {{REPO}}-pr
 description: Use when the user wants a PR description generated for the current branch. Reads commit history, file changes, and CLAUDE.md, then writes a Summary / Changes / Test Plan / Notes block to pr-description.md.
-allowed-tools: Read, Grep, Glob, Bash, Write
+allowed-tools: Read Grep Glob Bash(git *) Write
+disable-model-invocation: true
 ---
 
 Generate a PR description for the current branch. Follow these steps:

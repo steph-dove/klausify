@@ -1,7 +1,7 @@
 ---
 name: {{REPO}}-test
 description: Use when the user wants tests written for current changes (uncommitted diff or recent feature). Matches the repo's existing test framework, fixtures, and assertion style. Covers happy path, edge cases, and error paths without over-mocking.
-allowed-tools: Read, Grep, Glob, Bash, Edit, Write
+allowed-tools: Read Grep Glob Bash Edit Write
 ---
 
 Write tests for the current changes. Follow these steps:

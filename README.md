@@ -41,8 +41,6 @@ That's it. You'll be prompted for your base branch (auto-detects `dev`, `main`, 
 .github/
 └── PULL_REQUEST_TEMPLATE.md                   # Only if repo doesn't have one
 
-AGENTS.md                                      # Only if repo doesn't have one
-
 .gitignore                                     # Appends klausify output exclusions
 ```
 
@@ -71,8 +69,6 @@ AGENTS.md                                      # Only if repo doesn't have one
 **PreCommit hooks** — Auto-detects your lint/format commands and runs them before each commit.
 
 **PR template** — A basic PR template, only created if your repo doesn't already have one (checks root, `.github/`, and `docs/`).
-
-**AGENTS.md** — Lightweight instructions for AI agents, only created if one doesn't exist.
 
 **.gitignore** — Appends `pr-description.md` and `REVIEW_OUTPUT.md` so generated outputs don't get committed.
 
@@ -124,7 +120,7 @@ All subcommands support `--repo`, `--force`, and `--base-branch` where applicabl
 3. Injects those into the review skill template so `<repo>-review` checks repo-specific rules with the right path scope
 4. Detects your stack from marker files (`pyproject.toml`, `package.json`, `go.mod`, etc.)
 5. Sets permissions, deny rules, and hooks based on what it finds
-6. Skips anything that already exists (PR template, AGENTS.md) unless `--force` is used
+6. Skips anything that already exists (PR template) unless `--force` is used
 
 ## Claude Code Integration
 

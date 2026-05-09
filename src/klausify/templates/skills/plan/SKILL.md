@@ -1,7 +1,7 @@
 ---
 name: {{REPO}}-plan
 description: Use when the user wants to plan and implement a non-trivial task in this repo. Runs a multi-phase flow — discovery, parallel exploration, clarifying questions, parallel architectures, approval gate, implementation, parallel review, summary.
-allowed-tools: Read, Grep, Glob, Bash, Write, Edit, TodoWrite, Agent
+allowed-tools: Read Grep Glob Bash Write Edit TodoWrite Agent
 ---
 
 You are helping plan and implement a task in this repo. Follow these phases in order — do NOT skip Phase 3 (clarifying questions).

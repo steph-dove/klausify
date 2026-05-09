@@ -1,7 +1,7 @@
 ---
 name: {{REPO}}-implement
 description: Use when the user pastes a ticket, design doc, or task description and wants it implemented. Multi-phase flow — understand, investigate (in plan mode), plan, implement, verify. Enforces strict scope rules and writes failing tests first for bug fixes.
-allowed-tools: Read, Grep, Glob, Bash, Edit, Write
+allowed-tools: Read Grep Glob Bash Edit Write
 ---
 
 Here is the task to implement (the user described it in their message).

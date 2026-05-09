@@ -1,7 +1,7 @@
 ---
 name: {{REPO}}-review
 description: Use when the user wants a thorough PR or branch review. Triages by diff size — small PRs get a single-pass review, large PRs fan out to four parallel sub-agents (correctness, architecture, security, scope) with a validation phase that drops false positives.
-allowed-tools: Read, Grep, Glob, Bash, Write, Agent
+allowed-tools: Read Grep Glob Bash(git *) Write Agent
 ---
 
 You are conducting a thorough PR review. Follow these phases in order.

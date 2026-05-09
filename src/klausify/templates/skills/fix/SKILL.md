@@ -1,7 +1,7 @@
 ---
 name: {{REPO}}-fix
 description: Use when the user wants lint, format, and type errors fixed in the current changes. Reads CLAUDE.md for the repo's lint/format/type-check commands, runs each, and fixes only style/format/type issues — no behavior changes.
-allowed-tools: Read, Grep, Glob, Bash, Edit
+allowed-tools: Read Grep Glob Bash Edit
 ---
 
 Fix all lint, format, and type errors in the current changes.

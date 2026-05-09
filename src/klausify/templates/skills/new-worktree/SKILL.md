@@ -1,7 +1,7 @@
 ---
 name: {{REPO}}-new-worktree
 description: Use when the user wants a new git worktree created for a task. Picks a kebab-case branch name with a fix/feat/chore/docs/refactor prefix, runs `git worktree add` from the configured base branch, and reports the new path.
-allowed-tools: Read, Bash
+allowed-tools: Read Bash(git worktree *) Bash(git branch *) Bash(basename *) Bash(pwd *)
 disable-model-invocation: true
 ---
 

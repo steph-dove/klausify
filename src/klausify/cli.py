@@ -7,7 +7,6 @@ import typer
 from rich.console import Console
 
 from klausify import __version__
-from klausify.agents import scaffold_agents
 from klausify.checklist import generate_checklist
 from klausify.claude_md import run_init
 from klausify.github import scaffold_github
@@ -97,7 +96,6 @@ def init(
         ("settings", lambda: generate_settings(repo=repo, force=force)),
         ("hooks", lambda: scaffold_hooks(repo=repo, force=force)),
         ("PR template", lambda: scaffold_github(repo=repo, force=force)),
-        ("AGENTS.md", lambda: scaffold_agents(repo=repo, force=force)),
         (".gitignore", lambda: update_gitignore(repo=repo)),
     ]
 
