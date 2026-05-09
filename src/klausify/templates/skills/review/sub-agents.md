@@ -184,3 +184,62 @@ If no repo-specific checks are listed above, read CLAUDE.md and any matching `.c
 - Be precise about what is out of scope vs. in scope.
 - For convention violations, reference the specific convention (file path or section in CLAUDE.md / `.claude/rules/`).
 ```
+
+---
+
+## Sub-agent 5: Agentic & Evals (conditional)
+
+**Spawn this sub-agent ONLY if the Phase 1 diff touches AI / agent / eval code.** Detection signals:
+
+- Files under `**/skills/**`, `**/agents/**`, `**/.claude/**`
+- MCP server files: `**/mcp_*.{py,ts,js}`, `**/mcp-server*.*`, `**/.mcp.json`
+- Eval suites: `**/evals/**`, `**/eval_*.{py,ts,js}`, `*.eval.{py,ts,js}`
+- Imports of `anthropic`, `openai`, `langchain`, `langgraph`, `llama_index`, `mcp`, `@anthropic-ai/sdk`, `@openai/openai`, `inspect_ai`, `langsmith`, `promptfoo`, `ragas`
+- System-prompt or skill-body string changes (e.g. `SKILL.md`, `*.prompt.md`, `system_prompt = "..."` literals)
+
+If none of these signals are present in the diff, skip this sub-agent entirely — it has nothing to review.
+
+### Lens
+
+```
+## Look for: Agentic & Eval correctness
+
+If, after reading the diff, you find no AI / agent / eval changes, return one line: "No agentic or eval changes — nothing to review." Do NOT invent findings.
+
+### Agentic code (prompts, tools, model calls, agents, skills, MCP servers)
+
+- **Hardcoded model IDs** (`claude-opus-4-7`, `gpt-4o`, `gemini-1.5-pro`) inline in code instead of routed through config. Models change; literals rot. Flag every literal that should be a config value.
+- **Missing prompt caching** on stable prefixes (system prompts, tool/function definitions, skill bodies, long retrieved context). Anthropic SDK exposes this via `cache_control` breakpoints; OpenAI surfaces it automatically on the Responses API. Long stable prefixes that aren't cached are wasted tokens.
+- **Unbounded agent loops** — recursion or `while True:` driving model calls with no max-iteration / max-cost guard. Cite the exit condition (or absence).
+- **Token / context-window math** — system prompt + tools + history sized close to the model's window with no truncation strategy. Long static prefixes added to a chat history accumulator are a slow-burn defect.
+- **Sensitive data sent to LLM** without redaction: PII, secrets, internal API URLs, customer-specific identifiers. Especially in tool descriptions, dynamic context injection (`` !`<command>` ``), and retrieved-document chunks.
+- **Tool / function-call schema issues**: tool descriptions exceeding Anthropic's 1,024-char tool description cap (or 1,536-char skill description+when_to_use cap); `required` fields missing or wrong; tool-name collisions across multiple registered tools; ambiguous parameter names.
+- **LLM error paths quietly swallowed**: rate-limit (429) without retry/backoff, malformed-JSON parse, refusal, timeout, context-length-exceeded — bare `except:` / `catch (e)` blocks around an LLM call are almost always defects.
+- **System prompt or skill body changed without a version bump** — silent behavior shifts. Look for prompt edits in the diff that don't bump a version constant, invalidate a cache, or note the change in CHANGELOG.
+- **Streaming vs non-streaming**: long calls (>10s expected) made non-streaming where users see no progress; OR streaming used for short structured calls where the parsing overhead isn't justified.
+- **Claude Code skill / MCP specifics**:
+  - SKILL.md `description` doesn't start with "Use when…" (auto-trigger heuristic regression).
+  - `allowed-tools: Bash` unscoped on a skill that only needs git or one specific tool.
+  - Side-effecting skills (commit, deploy, send-message, branch creation) missing `disable-model-invocation: true`.
+  - Tool descriptions that hardcode a count or list ("review, plan, debug, and 8 others") that will rot as the surface evolves.
+  - `allowed-tools` separator: comma-separated instead of canonical space-separated.
+
+### Evals (test suites for LLM behavior)
+
+- **Non-determinism** where avoidable: `temperature` not 0, no `seed` / `random_state`, no fixed eval harness seed. Flag any LLM call inside an eval that doesn't pin temperature.
+- **Pass thresholds**: too high (>95%) → flaky and CI-noise generator; too low (<60%) → meaningless. Flag thresholds without a documented rationale.
+- **No committed baseline / golden output** to diff against. Snapshot evals should have a checked-in expected output, not free-form "looks reasonable" assertions or LLM-as-judge calls without a calibrated rubric.
+- **Coverage gaps**: happy-path evals only, no failure-mode / refusal / boundary-input / adversarial evals. The hard cases are where eval suites earn their keep.
+- **Eval datasets not versioned** in source control — checked in as opaque blobs without provenance, or pulled from external URLs without a lockfile. A drifted dataset silently invalidates trend lines.
+- **Cost guard missing**: an eval that spends real API credit per run with no max-call / max-token cap and no CI throttle. A flaky eval can cost real money.
+- **Snapshot rot**: snapshot evals with stale `// updated: 2024-...` comments and no recent rebaseline. Stale snapshots silently mask regressions.
+- **Eval not wired to CI** — only manual invocation. Means regressions ship.
+- **LLM-as-judge without calibration**: using one LLM to grade another's output without a calibration set showing the judge's accuracy on known-good and known-bad outputs.
+```
+
+### Additional rules
+
+```
+- Cite the exact file:line and the SDK/library/model being used (e.g. "src/agent.py:42 — `anthropic.messages.create(model='claude-opus-4-7', ...)` with no cache_control on the system prompt").
+- Distinguish "smell" (e.g. hardcoded model ID, missing cache_control) from "bug" (e.g. unbounded loop, swallowed 429) in your severity. Smells are typically Medium/Low; bugs are High/Blocker.
+```

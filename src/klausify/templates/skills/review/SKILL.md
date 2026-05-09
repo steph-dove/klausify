@@ -132,11 +132,12 @@ Write this output to `REVIEW_OUTPUT.md`.
 
 This PR is large enough to benefit from focused, parallel review.
 
-1. **Read `.claude/skills/{{REPO}}-review/sub-agents.md`.** That file has a shared **Common scaffold** (intro, output format, ground rules) plus four sub-agent **Lens** sections (Correctness & Logic, Architecture & Design, Security & Quality, Scope & Conventions).
+1. **Read `.claude/skills/{{REPO}}-review/sub-agents.md`.** That file has a shared **Common scaffold** (intro, output format, ground rules) plus five sub-agent **Lens** sections: Correctness & Logic, Architecture & Design, Security & Quality, Scope & Conventions, and **Agentic & Evals** (conditional — see step 3).
 2. **Compose each sub-agent's prompt** by concatenating: the Common scaffold (with `[PASTE THE FULL DIFF HERE]` and `[PASTE THE COMMIT LOG HERE]` replaced by the actual diff and log from Phase 1), then the sub-agent's Lens, then its Additional rules (if any). The "How to compose a sub-agent prompt" section at the top of `sub-agents.md` documents this exactly.
-3. **Use the Agent tool to launch all four sub-agents in a single assistant message** — that gives you parallel execution. Each call passes `subagent_type: general-purpose` and the composed body from step 2. Sub-agents return findings as text and must NOT write any files.
+3. **Decide whether to spawn sub-agent 5 (Agentic & Evals).** Skim the diff for AI / agent / eval signals — changes under `**/skills/**`, `**/agents/**`, `**/.claude/**`, MCP server files (`mcp_*.{py,ts,js}`, `mcp-server*.*`, `.mcp.json`), eval suites (`**/evals/**`, `eval_*.{py,ts,js}`, `*.eval.*`), or imports of `anthropic` / `openai` / `langchain` / `langgraph` / `mcp` / `@anthropic-ai/sdk` / `inspect_ai` / `langsmith` / `promptfoo`. If any signal is present, include sub-agent 5; otherwise skip it (it has nothing to review). The full detection list is at the top of sub-agent 5 in `sub-agents.md`.
+4. **Use the Agent tool to launch all selected sub-agents in a single assistant message** — that gives you parallel execution. Each call passes `subagent_type: general-purpose` and the composed body from step 2. Sub-agents return findings as text and must NOT write any files.
 
-After all four return, proceed to Phase 3.
+After all sub-agents return, proceed to Phase 3.
 
 ---
 
@@ -174,7 +175,7 @@ Write the final output to **REVIEW_OUTPUT.md** in this format:
 
 **[Severity: Blocker | High | Medium | Low | Warn | Nit]**
 **[Location: file_path:line_number and code_snippet]**
-**[Category: Correctness | Concurrency | Design | Performance | Reliability | Security | Readability | Tests | Dependencies | Scope | Conventions]**
+**[Category: Correctness | Concurrency | Design | Performance | Reliability | Security | Readability | Tests | Dependencies | Scope | Conventions | Agentic | Evals]**
 **Comment:**
 
 - What is wrong or questionable, why this is a problem
@@ -193,7 +194,7 @@ Write the final output to **REVIEW_OUTPUT.md** in this format:
 - [ ] Adequate test coverage for changes
 - [ ] Edge cases tested
 
-**Review method:** Parallel (4 focused sub-agents)
+**Review method:** Parallel (4–5 focused sub-agents — sub-agent 5 conditional on AI/agent/eval signals)
 
 ---
 
