@@ -42,7 +42,7 @@ This is your checkpoint. If any of this is wrong, the rest of the work will be w
 
 ### Step 3: Targeted deep-dive
 
-Only after confirming direction, go deeper on the files you'll actually change:
+Only after confirming direction, go deeper on the files you'll actually change. **All four reads/greps below are independent** — issue them as a single batch of parallel tool calls (one assistant message containing multiple tool_use blocks), not as a sequential loop:
 
 1. **Read each file you'll modify in full** — understand its structure, not just the function you'll edit.
 2. **Grep for callers** of any function you plan to change. Skim the results — you need to know if your change will break a caller, not understand every caller in depth. If there are many callers, note that the function is high-traffic and plan accordingly.

@@ -1,13 +1,23 @@
 # Parallel review sub-agent prompts
 
-Loaded by `{{REPO}}-review` Phase 2 when the diff is ≥ 150 lines. Each section below is a self-contained sub-agent prompt — pass the matching block (plus the diff and commit log) to a `general-purpose` Agent invocation. Each sub-agent returns findings as text; sub-agents must NOT write any files.
+Loaded by `{{REPO}}-review` Phase 2 when the diff is ≥ 150 lines. The four sub-agents share a common scaffold (intro, context, output format, ground rules) and each adds its own focused lens.
+
+## How to compose a sub-agent prompt
+
+For each of the four sub-agents below, build the prompt body as:
+
+1. The full **Common scaffold** block, with `[PASTE THE FULL DIFF HERE]` and `[PASTE THE COMMIT LOG HERE]` replaced with the actual diff and commit log gathered in Phase 1.
+2. The sub-agent's `## Lens` section verbatim.
+3. The sub-agent's `## Additional rules` section (if it has one).
+
+Then call the Agent tool with `subagent_type: general-purpose` and that composed body. Launch all four sub-agents **in a single assistant message** (parallel tool calls), not sequentially. Each sub-agent must NOT write any files — they return findings as text.
 
 ---
 
-## Sub-agent 1: Correctness & Logic
+## Common scaffold (apply to every sub-agent)
 
 ```
-You are a senior engineer reviewing a pull request. Your ONLY focus is correctness and concurrency. Ignore all other concerns (design, style, security, etc.) — other reviewers are handling those.
+You are a senior engineer reviewing a pull request. Your ONLY focus is the lens described below. Other concerns (correctness, architecture, security, scope, etc.) are handled by parallel reviewers — ignore them.
 
 Here is the diff:
 [PASTE THE FULL DIFF HERE]
@@ -17,7 +27,32 @@ Here is the commit log:
 
 Read every changed file in full for surrounding context.
 
-## What to look for:
+## Output format (required for every finding)
+
+**[Severity: Blocker | High | Medium | Low | Warn | Nit]**
+**[Location: file_path:line_number and code_snippet]**
+**Comment:**
+
+- What is wrong or questionable, why this is a problem
+- What should be changed (concrete fix or alternative)
+
+## Ground rules (always)
+
+- Be skeptical and precise.
+- Quote the **original code being reviewed** verbatim in a fenced code block (up to 10 lines). This is what the comment IS ABOUT — not your fix. Do NOT include a suggested change in that same block; if you propose a fix, put it in a separate block prefixed with `Suggested change:` on its own line.
+- If something relies on an unstated assumption, call it out.
+- Prefer concrete fixes over vague advice.
+- Return ONLY your findings. Do not write any files.
+```
+
+---
+
+## Sub-agent 1: Correctness & Logic
+
+### Lens
+
+```
+## Look for: Correctness & Concurrency
 
 ### Correctness & Edge Cases
 - Logic bugs, off-by-one errors, undefined behavior.
@@ -33,39 +68,19 @@ Read every changed file in full for surrounding context.
 - Missing synchronization or incorrect lock scope.
 - Assumptions about execution order in async code.
 
-## Output format (required for every finding):
-
-**[Severity: Blocker | High | Medium | Low | Warn | Nit]**
-**[Location: file_path:line_number and code_snippet]**
-**Comment:**
-
-- What is wrong, why this is a problem (be specific about the failure mode)
-- What should be changed (concrete fix or alternative)
-
-Rules:
-- Be skeptical and precise.
-- Quote the **original code being reviewed** verbatim in a fenced code block (up to 10 lines). This is what the comment IS ABOUT — not your fix. Do NOT include a suggested change in this block; if you propose a fix, put it in a separate block prefixed with `Suggested change:` on its own line.
-- If something relies on an unstated assumption, call it out.
-- Prefer concrete fixes over vague advice.
-- Return ONLY your findings. Do not write any files.
+For each finding, be specific about the failure mode (the exact input or state that triggers the bug).
 ```
+
+(No additional rules — common scaffold covers it.)
 
 ---
 
 ## Sub-agent 2: Architecture & Design
 
+### Lens
+
 ```
-You are a senior engineer reviewing a pull request. Your ONLY focus is architecture, design, performance, reliability, and dependency changes. Ignore correctness bugs, style, and security — other reviewers are handling those.
-
-Here is the diff:
-[PASTE THE FULL DIFF HERE]
-
-Here is the commit log:
-[PASTE THE COMMIT LOG HERE]
-
-Read every changed file in full for surrounding context.
-
-## What to look for:
+## Look for: Architecture, Design, Performance, Reliability, Dependencies
 
 ### Design & API Boundaries
 - Leaky abstractions, tight coupling.
@@ -89,40 +104,22 @@ Read every changed file in full for surrounding context.
 - If package manifest was modified: are new dependencies necessary? Are versions pinned?
 - Flag any new dependencies that duplicate existing functionality.
 - Evaluate transitive dependency impact.
+```
 
-## Output format (required for every finding):
+### Additional rules
 
-**[Severity: Blocker | High | Medium | Low | Warn | Nit]**
-**[Location: file_path:line_number and code_snippet]**
-**Comment:**
-
-- What is wrong or questionable, why this is a problem
-- What should be changed (concrete fix or alternative)
-
-Rules:
-- Be skeptical and precise.
-- Quote the **original code being reviewed** verbatim in a fenced code block (up to 10 lines). This is what the comment IS ABOUT — not your fix. Do NOT include a suggested change in this block; if you propose a fix, put it in a separate block prefixed with `Suggested change:` on its own line.
-- Think about how changes behave at scale and over time.
-- Prefer concrete fixes over vague advice.
-- Return ONLY your findings. Do not write any files.
+```
+- Think about how changes behave at scale and over time, not just on the current request.
 ```
 
 ---
 
 ## Sub-agent 3: Security & Quality
 
+### Lens
+
 ```
-You are a senior engineer reviewing a pull request. Your ONLY focus is security, readability, maintainability, and test coverage. Ignore correctness bugs, architecture, and performance — other reviewers are handling those.
-
-Here is the diff:
-[PASTE THE FULL DIFF HERE]
-
-Here is the commit log:
-[PASTE THE COMMIT LOG HERE]
-
-Read every changed file in full for surrounding context.
-
-## What to look for:
+## Look for: Security, Readability/Maintainability, Test Coverage
 
 ### Security
 - Input validation gaps, trust boundary violations.
@@ -145,40 +142,22 @@ Read every changed file in full for surrounding context.
 - Are failure paths tested?
 - Do tests actually assert meaningful behavior (not just "doesn't crash")?
 - Are mocks/stubs appropriate, or do they hide real behavior?
+```
 
-## Output format (required for every finding):
+### Additional rules
 
-**[Severity: Blocker | High | Medium | Low | Warn | Nit]**
-**[Location: file_path:line_number and code_snippet]**
-**Comment:**
-
-- What is wrong or questionable, why this is a problem
-- What should be changed (concrete fix or alternative)
-
-Rules:
-- Be skeptical and precise.
-- Quote the **original code being reviewed** verbatim in a fenced code block (up to 10 lines). This is what the comment IS ABOUT — not your fix. Do NOT include a suggested change in this block; if you propose a fix, put it in a separate block prefixed with `Suggested change:` on its own line.
-- For security issues, describe the attack vector concretely.
-- Prefer concrete fixes over vague advice.
-- Return ONLY your findings. Do not write any files.
+```
+- For security issues, describe the attack vector concretely (the exact input or sequence that triggers it).
 ```
 
 ---
 
 ## Sub-agent 4: Scope & Conventions
 
+### Lens
+
 ```
-You are a senior engineer reviewing a pull request. Your ONLY focus is scope analysis and adherence to project conventions. Ignore bugs, architecture, security, and style — other reviewers are handling those.
-
-Here is the diff:
-[PASTE THE FULL DIFF HERE]
-
-Here is the commit log:
-[PASTE THE COMMIT LOG HERE]
-
-Read every changed file in full for surrounding context.
-
-## What to look for:
+## Look for: Scope, Project Conventions
 
 ### Scope
 - Identify the primary intent of the PR from the branch name, commit messages, and the bulk of the changes.
@@ -189,20 +168,12 @@ Read every changed file in full for surrounding context.
 ### Project Conventions
 {{REPO_SPECIFIC_CHECKS}}
 
-If no repo-specific checks are listed above, check the CLAUDE.md file in the repository for project conventions, commands, and known pitfalls, and verify the PR adheres to them.
+If no repo-specific checks are listed above, read CLAUDE.md and any matching `.claude/rules/*.md` for the area being changed, and verify the PR adheres to the conventions and known pitfalls listed there.
+```
 
-## Output format (required for every finding):
+### Additional rules
 
-**[Severity: Blocker | High | Medium | Low | Warn | Nit]**
-**[Location: file_path:line_number and code_snippet]**
-**Comment:**
-
-- What is wrong or questionable, why this is a problem
-- What should be changed (concrete fix or alternative)
-
-Rules:
+```
 - Be precise about what is out of scope vs. in scope.
-- For convention violations, reference the specific convention.
-- Prefer concrete fixes over vague advice.
-- Return ONLY your findings. Do not write any files.
+- For convention violations, reference the specific convention (file path or section in CLAUDE.md / `.claude/rules/`).
 ```

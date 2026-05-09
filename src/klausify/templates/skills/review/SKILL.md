@@ -12,13 +12,34 @@ You are conducting a thorough PR review. Follow these phases in order.
 
 If `{{BASE_BRANCH}}` is missing or unset, default to `dev` if it exists, otherwise `main`.
 
-1. Run `git diff --stat {{BASE_BRANCH}}...HEAD` and count the total lines changed (additions + deletions).
-2. Run `git diff {{BASE_BRANCH}}...HEAD` to get the full diff.
-3. Run `git log {{BASE_BRANCH}}..HEAD --oneline` to understand commit history and intent.
-4. For each changed file, read the full file (not just the diff hunks) to understand surrounding context.
-5. If the branch name contains a ticket reference (e.g. FEAT-1234), note it for context.
+The diff stat, full diff, commit log, and branch name below are pre-rendered as dynamic context — you do not need to fetch them yourself.
 
-Store the diff output, file contents, and commit log — you will need them in the next phase.
+### Diff stat
+
+```!
+git diff --stat {{BASE_BRANCH}}...HEAD
+```
+
+### Commit log
+
+```!
+git log {{BASE_BRANCH}}..HEAD --oneline
+```
+
+### Branch name
+
+```!
+git branch --show-current
+```
+
+### What you still need to do
+
+1. Run `git diff {{BASE_BRANCH}}...HEAD` to get the full diff (kept as a tool call rather than injected — diffs can be very large).
+2. **Read the full file (not just the diff hunks) for every changed file listed in the stat above.** These are independent reads — issue them all in a single batch of parallel tool calls, not sequentially.
+3. Count the total lines changed (additions + deletions) from the stat.
+4. If the branch name contains a ticket reference (e.g. FEAT-1234), note it for context.
+
+Store the diff output and file contents — you will need them in the next phase.
 
 ---
 
@@ -110,9 +131,9 @@ Write this output to `REVIEW_OUTPUT.md`.
 
 This PR is large enough to benefit from focused, parallel review.
 
-1. **Read the sub-agent prompts** from `.claude/skills/{{REPO}}-review/sub-agents.md`. That file contains four self-contained prompts for the parallel reviewers.
-2. **Use the Agent tool** to launch all four reviewers **simultaneously in a single response**. For each: pass `subagent_type: general-purpose`, the matching sub-agent prompt body from `sub-agents.md`, and the diff/file contents/commit log gathered in Phase 1 (substituted into the `[PASTE …]` placeholders).
-3. The four sub-agents are: **Correctness & Logic**, **Architecture & Design**, **Security & Quality**, **Scope & Conventions**. Each returns its findings as text — sub-agents must NOT write any files.
+1. **Read `.claude/skills/{{REPO}}-review/sub-agents.md`.** That file has a shared **Common scaffold** (intro, output format, ground rules) plus four sub-agent **Lens** sections (Correctness & Logic, Architecture & Design, Security & Quality, Scope & Conventions).
+2. **Compose each sub-agent's prompt** by concatenating: the Common scaffold (with `[PASTE THE FULL DIFF HERE]` and `[PASTE THE COMMIT LOG HERE]` replaced by the actual diff and log from Phase 1), then the sub-agent's Lens, then its Additional rules (if any). The "How to compose a sub-agent prompt" section at the top of `sub-agents.md` documents this exactly.
+3. **Use the Agent tool to launch all four sub-agents in a single assistant message** — that gives you parallel execution. Each call passes `subagent_type: general-purpose` and the composed body from step 2. Sub-agents return findings as text and must NOT write any files.
 
 After all four return, proceed to Phase 3.
 

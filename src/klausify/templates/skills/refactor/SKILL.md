@@ -24,11 +24,11 @@ Before changing any code, confirm you have tests that cover the current behavior
 
 ## Phase 2: Understand the Current Code
 
-Read the code you're refactoring in full. Understand:
+Read the code you're refactoring in full. The three checks below are independent — issue them as a single batch of parallel tool calls, not sequentially:
 
-1. **What it does** — the inputs, outputs, side effects, and edge cases.
-2. **Who calls it** — grep for callers. Every caller is a contract you must preserve.
-3. **What depends on its interface** — function signatures, return types, exceptions thrown, event emissions. These are the things you cannot change without updating all consumers.
+1. **What it does** — the inputs, outputs, side effects, and edge cases. Read the file(s) in full.
+2. **Who calls it** — grep for callers across the whole repo. Every caller is a contract you must preserve.
+3. **What depends on its interface** — function signatures, return types, exceptions thrown, event emissions. Grep for type/import references too. These are the things you cannot change without updating all consumers.
 
 ---
 

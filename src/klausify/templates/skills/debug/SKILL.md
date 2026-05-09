@@ -24,7 +24,7 @@ Debug the error or issue the user described. Do NOT jump to a fix. Follow these 
 
 Do NOT write any fix yet. Investigate read-only until you understand the root cause.
 
-1. **Find the code path.** Starting from the error location or the described behavior, trace the execution:
+1. **Find the code path.** Starting from the error location or the described behavior, trace the execution. The three operations below are independent — issue them as a single batch of parallel tool calls, not sequentially:
    - Grep for the error message, function name, or component.
    - Read the file where the failure occurs — the full file, not just the function.
    - Trace backwards: what calls this code? What data does it receive?
