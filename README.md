@@ -50,7 +50,7 @@ That's it. You'll be prompted for your base branch (auto-detects `dev`, `main`, 
 
 **settings.json** — Auto-detects your stack (Python, Node, Go, Rust, Make) and sets tool permissions. Detects sensitive files (`.env`, `*.pem`, `credentials*`) and adds deny rules so Claude can't read them.
 
-**Skills** — Each repo gets 11 namespaced skills (`<repo>-<skill>`) so Claude Code auto-triggers them by description and they don't collide across repos:
+**Skills** — Each repo gets a set of namespaced skills (`<repo>-<skill>`) so Claude Code auto-triggers them by description and they don't collide across repos. The bundled set is listed below; the canonical list lives in `SKILL_NAMES` in `src/klausify/skills.py`.
 
 | Skill | What it does | Output |
 |-------|-------------|--------|
